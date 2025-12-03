@@ -19,6 +19,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            margin-bottom: 10px; /* Add margin to separate buttons */
         }
 
         button:hover {
@@ -36,7 +37,10 @@
 </head>
 
 <body>
-    <button id="saveButton">One-Shot Bookmark All Windows and Tabs</button>
+    <div id="button-container">
+        <button id="saveButton">One-Shot Bookmark All Windows and Tabs</button>
+        <button id="saveCurrentWindowButton">Bookmark Current Window Only</button>
+    </div>
     
     <div style="margin-top: 15px;">
         <label style="display: flex; align-items: center; cursor: pointer;">

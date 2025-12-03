@@ -19,6 +19,16 @@ document.getElementById('autoDownloadCheckbox').addEventListener('change', async
 });
 
 document.getElementById('saveButton').addEventListener('click', async () => {
+    const allWindows = await chrome.windows.getAll({ populate: true });
+    await saveWindows(allWindows);
+});
+
+document.getElementById('saveCurrentWindowButton').addEventListener('click', async () => {
+    const currentWindow = await chrome.windows.getCurrent({ populate: true });
+    await saveWindows([currentWindow]);
+});
+
+async function saveWindows(windows) {
     const statusDiv = document.getElementById('status');
     const autoDownloadEnabled = document.getElementById('autoDownloadCheckbox').checked;
     
@@ -34,8 +44,7 @@ document.getElementById('saveButton').addEventListener('click', async () => {
         };
         const envDescriptor = response.environment?.descriptor || 'unknown';
 
-        // Get all windows and calculate total tabs
-        const windows = await chrome.windows.getAll({ populate: true });
+        // Calculate total tabs
         const totalTabs = windows.reduce((sum, win) => sum + win.tabs.length, 0);
 
         // Create main folder with window and tab counts
@@ -113,4 +122,4 @@ document.getElementById('saveButton').addEventListener('click', async () => {
         statusDiv.textContent = 'Error: ' + error.message;
         console.error('Extension error:', error);
     }
-});
+}
