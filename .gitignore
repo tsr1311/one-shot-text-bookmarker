@@ -1,0 +1,12 @@
+# Rust
+file-watcher/target/
+file-watcher/Cargo.lock
+
+# macOS
+.DS_Store
+*.swp
+*.tmp
+
+# Editor files
+.vscode/
+*.log

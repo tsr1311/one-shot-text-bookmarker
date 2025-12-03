@@ -1,0 +1,34 @@
+{
+    "manifest_version": 3,
+    "name": "One-Shot Bookmarker",
+    "version": "1.0",
+    "description": "Saves all open Windows and Tabs into structured time-based bookmark tree",
+    "permissions": [
+        "tabs",
+        "bookmarks",
+        "storage",
+        "history",
+        "downloads",
+        "system.cpu",
+        "system.memory",
+        "system.display",
+        "activeTab",
+        "scripting"
+    ],
+    "host_permissions": [
+        "http://*/*",
+        "https://*/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "icons": {
+        "16": "icons/icon16.png",
+        "32": "icons/icon32.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    }
+}
