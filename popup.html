@@ -51,6 +51,14 @@
             Saves each tab as HTML file
         </div>
     </div>
+
+    <div id="selectorDiv" style="display: none; margin-top: 10px; margin-left: 20px;">
+        <label for="selectorInput" style="font-size: 12px; color: #333;">CSS Selector (optional):</label>
+        <input type="text" id="selectorInput" placeholder="e.g., #content, .article" style="width: 95%; margin-top: 5px; padding: 4px;">
+        <div style="font-size: 11px; color: #666; margin-top: 5px;">
+            Saves only matching elements. If empty, saves the whole page.
+        </div>
+    </div>
     
     <div id="status"></div>
     <script src="utils.js"></script>

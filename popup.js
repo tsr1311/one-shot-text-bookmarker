@@ -1,12 +1,21 @@
 // Load saved checkbox state when popup opens
 document.addEventListener('DOMContentLoaded', async () => {
+    const checkbox = document.getElementById('autoDownloadCheckbox');
+    const selectorDiv = document.getElementById('selectorDiv');
+
     try {
         const result = await chrome.storage.local.get(['autoDownloadEnabled']);
-        const checkbox = document.getElementById('autoDownloadCheckbox');
         checkbox.checked = result.autoDownloadEnabled === true;
+        if (checkbox.checked) {
+            selectorDiv.style.display = 'block';
+        }
     } catch (error) {
         console.error('Failed to load auto-download setting:', error);
     }
+
+    checkbox.addEventListener('change', () => {
+        selectorDiv.style.display = checkbox.checked ? 'block' : 'none';
+    });
 });
 
 // Save checkbox state when it changes
@@ -31,6 +40,7 @@ document.getElementById('saveCurrentWindowButton').addEventListener('click', asy
 async function saveWindows(windows) {
     const statusDiv = document.getElementById('status');
     const autoDownloadEnabled = document.getElementById('autoDownloadCheckbox').checked;
+    const selector = document.getElementById('selectorInput').value;
     
     statusDiv.textContent = autoDownloadEnabled ? 'Saving bookmarks and downloading content...' : 'Saving...';
 
@@ -109,7 +119,7 @@ async function saveWindows(windows) {
             // Download tab contents if auto-download is enabled
             if (autoDownloadEnabled) {
                 const windowFolderPath = `${mainFolderName}/${windowFolderName}`;
-                await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex);
+                await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector);
             }
         }
 

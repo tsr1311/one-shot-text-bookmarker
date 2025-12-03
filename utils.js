@@ -225,7 +225,7 @@ async function createPlaceholderFile(folderPath) {
 }
 
 // Download tab content as HTML file
-async function downloadTabContent(tab, folderPath, filePrefix) {
+async function downloadTabContent(tab, folderPath, filePrefix, selector) {
     try {
         // Create a safe filename from the tab title
         const safeTitle = (tab.title || 'untitled')
@@ -242,18 +242,27 @@ async function downloadTabContent(tab, folderPath, filePrefix) {
         // Execute script to get page content
         const results = await chrome.scripting.executeScript({
             target: { tabId: tab.id },
-            func: () => {
-                // Get the complete HTML including doctype
-                const doctype = document.doctype ? 
-                    `<!DOCTYPE ${document.doctype.name}${document.doctype.publicId ? ` PUBLIC "${document.doctype.publicId}"` : ''}${document.doctype.systemId ? ` "${document.doctype.systemId}"` : ''}>` : 
-                    '<!DOCTYPE html>';
+            func: (selector) => {
+                let content = '';
+                if (selector) {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach(el => {
+                        content += el.outerHTML + '\n';
+                    });
+                } else {
+                    const doctype = document.doctype ? 
+                        `<!DOCTYPE ${document.doctype.name}${document.doctype.publicId ? ` PUBLIC "${document.doctype.publicId}"` : ''}${document.doctype.systemId ? ` "${document.doctype.systemId}"` : ''}>` : 
+                        '<!DOCTYPE html>';
+                    content = doctype + '\n' + document.documentElement.outerHTML;
+                }
                 
                 return {
-                    html: doctype + '\n' + document.documentElement.outerHTML,
+                    html: content,
                     title: document.title,
                     url: window.location.href
                 };
-            }
+            },
+            args: [selector]
         });
 
         if (results && results[0] && results[0].result) {
@@ -289,7 +298,7 @@ ${pageData.html}`;
 }
 
 // Download all tabs content in a window
-async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex) {
+async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector) {
     const downloadPromises = window.tabs.map(async (tab, tabIndex) => {
         try {
             // Get tab timestamp for filename prefix
@@ -297,7 +306,7 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
             const tabTime = new Date(tabTimestamp);
             const prefix = formatTimestamp(tabTime);
             
-            await downloadTabContent(tab, windowFolderPath, prefix);
+            await downloadTabContent(tab, windowFolderPath, prefix, selector);
         } catch (error) {
             console.error(`Error downloading tab ${tabIndex + 1} in window ${windowIndex + 1}:`, error);
         }
