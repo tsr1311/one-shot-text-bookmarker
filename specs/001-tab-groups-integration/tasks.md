@@ -19,8 +19,8 @@
 
 **Purpose**: Project initialization and verification
 
-- [ ] T001 Verify manifest.json permissions (tabs, bookmarks, storage already present - no changes needed)
-- [ ] T002 Review existing code structure (popup.js, popup.html, utils.js, background.js)
+- [X] T001 Verify manifest.json permissions (tabs, bookmarks, storage already present - no changes needed)
+- [X] T002 Review existing code structure (popup.js, popup.html, utils.js, background.js)
 
 ---
 
@@ -30,9 +30,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Add sanitizeGroupName(groupTitle, groupId) function to utils.js (handles empty names, special chars, 50 char limit)
-- [ ] T004 Add group data caching to background.js (create tabGroups Map, implement updateGroupData() function)
-- [ ] T005 Add tab group update listener to background.js (listen to chrome.tabs.onUpdated for groupId changes)
+- [X] T003 Add sanitizeGroupName(groupTitle, groupId) function to utils.js (handles empty names, special chars, 50 char limit)
+- [X] T004 Add group data caching to background.js (create tabGroups Map, implement updateGroupData() function)
+- [X] T005 Add tab group update listener to background.js (listen to chrome.tabs.onUpdated for groupId changes)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -46,12 +46,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Modify bookmark creation logic in utils.js to query tab groups (add chrome.tabGroups.query() call)
-- [ ] T007 [US1] Create groupsMap in bookmark creation function in utils.js (Map groupId → group object)
-- [ ] T008 [US1] Enrich tabs with group data in utils.js (add groupId, groupName, group object to each tab)
-- [ ] T009 [US1] Implement group folder creation logic in utils.js (create group folder under window folder for grouped tabs)
-- [ ] T010 [US1] Handle ungrouped tabs in utils.js (groupId === -1 saved directly under window folder)
-- [ ] T011 [US1] Apply sanitizeGroupName to all group folder names in utils.js
+- [X] T006 [US1] Modify bookmark creation logic in utils.js to query tab groups (add chrome.tabGroups.query() call)
+- [X] T007 [US1] Create groupsMap in bookmark creation function in utils.js (Map groupId → group object)
+- [X] T008 [US1] Enrich tabs with group data in utils.js (add groupId, groupName, group object to each tab)
+- [X] T009 [US1] Implement group folder creation logic in utils.js (create group folder under window folder for grouped tabs)
+- [X] T010 [US1] Handle ungrouped tabs in utils.js (groupId === -1 saved directly under window folder)
+- [X] T011 [US1] Apply sanitizeGroupName to all group folder names in utils.js
 - [ ] T012 [US1] Test with multiple windows with different tab groups (manual testing)
 - [ ] T013 [US1] Test special characters in group names are sanitized correctly (manual testing)
 - [ ] T014 [US1] Test unnamed groups get default "Group-{id}" name (manual testing)
@@ -189,20 +189,25 @@
 ### Parallel Opportunities
 
 #### Within Foundational Phase (T003-T005):
+
 - T003 (sanitizeGroupName) and T004 (group caching) can run in parallel [P]
 - T005 depends on T004 completion (needs tabGroups Map)
 
 #### Within User Story 2 (T015-T023):
+
 - T015 (HTML) and T016 (CSS) can run in parallel [P]
 - T017 (loader) and T018 (saver) can run in parallel [P] after T015-T016
 - T020 (buildBookmarkPath) can run in parallel with T015-T019 [P]
 
 #### Within User Story 5 (T039-T048):
+
 - T039 (HTML) and T040 (CSS) can run in parallel [P]
 - T041 (loader) and T042 (saver) can run in parallel [P] after T039-T040
 
 #### Across User Stories:
+
 Once Foundational is complete, all five user stories can be worked on in parallel:
+
 - Developer A: User Story 1 (T006-T014) - Core functionality
 - Developer B: User Story 2 (T015-T023) - Settings UI
 - Developer C: User Story 3 (T024-T029) - Downloads
@@ -210,6 +215,7 @@ Once Foundational is complete, all five user stories can be worked on in paralle
 - Developer E: User Story 5 (T039-T048) - Filter option
 
 #### Within Polish Phase:
+
 - T049 (README update) and T050 (usage instructions) can run in parallel [P]
 - T055 (screenshots) can run in parallel with documentation [P]
 

@@ -212,6 +212,10 @@ async function saveWindows(windows, downloadPath) {
         };
         const envDescriptor = response.environment?.descriptor || 'unknown';
 
+        // Get tab groups data
+        const groups = await chrome.tabGroups.query({});
+        const groupsMap = new Map(groups.map(g => [g.id, g]));
+
         // Calculate total tabs
         const totalTabs = windows.reduce((sum, win) => sum + win.tabs.length, 0);
 
@@ -264,16 +268,49 @@ async function saveWindows(windows, downloadPath) {
             // Create folder for this window under today's folder
             const windowFolder = await createBookmarkFolder(windowFolderName, mainFolder.id);
 
-            // Save all tabs in this window as bookmarks
-            for (let tabIndex = 0; tabIndex < window.tabs.length; tabIndex++) {
-                const tab = window.tabs[tabIndex];
+            // Group tabs by groupId
+            const tabsByGroup = new Map();
+            const ungroupedTabs = [];
+            
+            for (const tab of window.tabs) {
+                if (tab.groupId !== undefined && tab.groupId !== -1) {
+                    if (!tabsByGroup.has(tab.groupId)) {
+                        tabsByGroup.set(tab.groupId, []);
+                    }
+                    tabsByGroup.get(tab.groupId).push(tab);
+                } else {
+                    ungroupedTabs.push(tab);
+                }
+            }
 
-                // Get tab creation timestamp
+            // Save grouped tabs with group folders
+            for (const [groupId, groupTabs] of tabsByGroup) {
+                const group = groupsMap.get(groupId);
+                const groupName = sanitizeGroupName(group?.title || '', groupId);
+                
+                // Create group folder under window folder
+                const groupFolder = await createBookmarkFolder(groupName, windowFolder.id);
+                
+                // Save tabs in this group
+                for (const tab of groupTabs) {
+                    const tabTimestamp = getTabTimestamp(tab.id, tab.url, timestamps, today);
+                    const tabCreationTime = new Date(tabTimestamp);
+                    const prefix = formatTimestamp(tabCreationTime);
+                    
+                    await chrome.bookmarks.create({
+                        parentId: groupFolder.id,
+                        title: `${prefix} ${tab.title}`,
+                        url: tab.url
+                    });
+                }
+            }
+
+            // Save ungrouped tabs directly under window folder
+            for (const tab of ungroupedTabs) {
                 const tabTimestamp = getTabTimestamp(tab.id, tab.url, timestamps, today);
                 const tabCreationTime = new Date(tabTimestamp);
                 const prefix = formatTimestamp(tabCreationTime);
 
-                // Create bookmark for the tab
                 await chrome.bookmarks.create({
                     parentId: windowFolder.id,
                     title: `${prefix} ${tab.title}`,

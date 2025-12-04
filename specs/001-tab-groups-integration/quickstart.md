@@ -22,6 +22,7 @@ This guide provides step-by-step instructions for implementing tab groups integr
 **Priority**: Critical - Enables all other features
 
 **Files Modified**:
+
 - `background.js` - Add group data caching
 - `utils.js` - Modify bookmark creation functions
 - `manifest.json` - Verify permissions (no changes needed)
@@ -29,40 +30,43 @@ This guide provides step-by-step instructions for implementing tab groups integr
 **Steps**:
 
 1. **Add group data caching to background.js**:
+
    ```javascript
    // Add to background.js
    const tabGroups = new Map(); // Store group data
-   
+
    async function updateGroupData() {
-       const groups = await chrome.tabGroups.query({});
-       groups.forEach(group => {
-           tabGroups.set(group.id, group);
-       });
+     const groups = await chrome.tabGroups.query({});
+     groups.forEach((group) => {
+       tabGroups.set(group.id, group);
+     });
    }
-   
+
    // Call on tab group updates
    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-       if (changeInfo.groupId !== undefined) {
-           updateGroupData();
-       }
+     if (changeInfo.groupId !== undefined) {
+       updateGroupData();
+     }
    });
    ```
 
 2. **Add group name sanitization to utils.js**:
+
    ```javascript
    // Add to utils.js
    function sanitizeGroupName(groupTitle, groupId) {
-       if (!groupTitle || groupTitle.trim() === '') {
-           return `Group-${groupId}`;
-       }
-       return groupTitle
-           .replace(/[/\\:*?"<>|`]/g, '_')
-           .trim()
-           .slice(0, 50);
+     if (!groupTitle || groupTitle.trim() === "") {
+       return `Group-${groupId}`;
+     }
+     return groupTitle
+       .replace(/[/\\:*?"<>|`]/g, "_")
+       .trim()
+       .slice(0, 50);
    }
    ```
 
 3. **Modify bookmark folder creation in utils.js**:
+
    - Find the bookmark creation loop in `saveWindows()` or similar function
    - Query tab groups: `const groups = await chrome.tabGroups.query({})`
    - Create Map: `const groupsMap = new Map(groups.map(g => [g.id, g]))`
@@ -82,6 +86,7 @@ This guide provides step-by-step instructions for implementing tab groups integr
 **Priority**: High - Enhances usability
 
 **Files Modified**:
+
 - `popup.html` - Add path structure UI control
 - `popup.js` - Add settings handler
 - `utils.js` - Modify bookmark path building logic
@@ -89,47 +94,59 @@ This guide provides step-by-step instructions for implementing tab groups integr
 **Steps**:
 
 1. **Add UI control to popup.html**:
+
    ```html
    <div id="bookmarkStructureDiv" style="display: none;">
-       <label>
-           <input type="radio" name="bookmarkStructure" value="window-group" checked>
-           Window/Group Structure
-       </label>
-       <label>
-           <input type="radio" name="bookmarkStructure" value="custom">
-           Custom (future)
-       </label>
-       <span id="structureSavedIndicator" class="saved-indicator">✓ Saved</span>
+     <label>
+       <input
+         type="radio"
+         name="bookmarkStructure"
+         value="window-group"
+         checked
+       />
+       Window/Group Structure
+     </label>
+     <label>
+       <input type="radio" name="bookmarkStructure" value="custom" />
+       Custom (future)
+     </label>
+     <span id="structureSavedIndicator" class="saved-indicator">✓ Saved</span>
    </div>
    ```
 
 2. **Add settings persistence to popup.js**:
+
    ```javascript
    // Load setting
-   const result = await chrome.storage.local.get(['bookmarkPathStructure']);
-   const structure = result.bookmarkPathStructure || 'window-group';
+   const result = await chrome.storage.local.get(["bookmarkPathStructure"]);
+   const structure = result.bookmarkPathStructure || "window-group";
    document.querySelector(`input[value="${structure}"]`).checked = true;
-   
+
    // Save on change
-   document.querySelectorAll('input[name="bookmarkStructure"]').forEach(radio => {
-       radio.addEventListener('change', async (e) => {
-           await chrome.storage.local.set({ bookmarkPathStructure: e.target.value });
-           showSavedIndicator('structureSavedIndicator');
+   document
+     .querySelectorAll('input[name="bookmarkStructure"]')
+     .forEach((radio) => {
+       radio.addEventListener("change", async (e) => {
+         await chrome.storage.local.set({
+           bookmarkPathStructure: e.target.value,
+         });
+         showSavedIndicator("structureSavedIndicator");
        });
-   });
+     });
    ```
 
 3. **Update bookmark path building in utils.js**:
+
    ```javascript
    async function buildBookmarkPath(window, group, pathStructure) {
-       const windowName = formatWindowFolder(/* params */);
-       
-       if (pathStructure === 'window-group' && group) {
-           const groupName = sanitizeGroupName(group.title, group.id);
-           return `${windowName}/${groupName}`;
-       }
-       
-       return windowName;
+     const windowName = formatWindowFolder(/* params */);
+
+     if (pathStructure === "window-group" && group) {
+       const groupName = sanitizeGroupName(group.title, group.id);
+       return `${windowName}/${groupName}`;
+     }
+
+     return windowName;
    }
    ```
 
@@ -144,28 +161,36 @@ This guide provides step-by-step instructions for implementing tab groups integr
 **Priority**: High - Adds valuable metadata
 
 **Files Modified**:
+
 - `utils.js` - Modify `downloadTabContent()` function
 
 **Steps**:
 
 1. **Add group context to HTML downloads**:
+
    ```javascript
    // In downloadTabContent function
-   async function downloadTabContent(tab, folderPath, filePrefix, selector, excludeElements) {
-       // ... existing code to get HTML content ...
-       
-       // Get group data
-       let groupComment = '<!-- tab-context: ungrouped -->\n';
-       if (tab.groupId !== -1) {
-           const group = await chrome.tabGroups.get(tab.groupId);
-           const groupName = sanitizeGroupName(group.title, group.id);
-           groupComment = `<!-- tab-context: ${groupName} -->\n`;
-       }
-       
-       // Prepend comment to HTML
-       const modifiedHtml = groupComment + htmlContent;
-       
-       // ... existing code to create blob and download ...
+   async function downloadTabContent(
+     tab,
+     folderPath,
+     filePrefix,
+     selector,
+     excludeElements
+   ) {
+     // ... existing code to get HTML content ...
+
+     // Get group data
+     let groupComment = "<!-- tab-context: ungrouped -->\n";
+     if (tab.groupId !== -1) {
+       const group = await chrome.tabGroups.get(tab.groupId);
+       const groupName = sanitizeGroupName(group.title, group.id);
+       groupComment = `<!-- tab-context: ${groupName} -->\n`;
+     }
+
+     // Prepend comment to HTML
+     const modifiedHtml = groupComment + htmlContent;
+
+     // ... existing code to create blob and download ...
    }
    ```
 
@@ -181,52 +206,59 @@ This guide provides step-by-step instructions for implementing tab groups integr
 **Priority**: Medium - Enhances documentation
 
 **Files Modified**:
+
 - `utils.js` - Modify `generateOverviewHtml()` function
 
 **Steps**:
 
 1. **Enhance generateOverviewHtml function**:
+
    ```javascript
-   function generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor) {
-       // ... existing header code ...
-       
-       windows.forEach((window, windowIndex) => {
-           html += `<h2>Window ${windowIndex + 1}</h2>`;
-           
-           // Group tabs by groupId
-           const groupedTabs = new Map();
-           const ungroupedTabs = [];
-           
-           window.tabs.forEach(tab => {
-               if (tab.groupId !== -1) {
-                   if (!groupedTabs.has(tab.groupId)) {
-                       groupedTabs.set(tab.groupId, []);
-                   }
-                   groupedTabs.get(tab.groupId).push(tab);
-               } else {
-                   ungroupedTabs.push(tab);
-               }
-           });
-           
-           // Render groups
-           groupedTabs.forEach((tabs, groupId) => {
-               const group = tabs[0].group; // Group data attached during processing
-               html += `<h3>Group: ${group.title || 'Unnamed'}</h3>`;
-               tabs.forEach(tab => {
-                   html += `<div class="tab">...tab content...</div>`;
-               });
-           });
-           
-           // Render ungrouped tabs
-           if (ungroupedTabs.length > 0) {
-               html += `<h3>Ungrouped Tabs</h3>`;
-               ungroupedTabs.forEach(tab => {
-                   html += `<div class="tab">...tab content...</div>`;
-               });
+   function generateOverviewHtml(
+     windows,
+     timestamps,
+     mainFolderName,
+     envDescriptor
+   ) {
+     // ... existing header code ...
+
+     windows.forEach((window, windowIndex) => {
+       html += `<h2>Window ${windowIndex + 1}</h2>`;
+
+       // Group tabs by groupId
+       const groupedTabs = new Map();
+       const ungroupedTabs = [];
+
+       window.tabs.forEach((tab) => {
+         if (tab.groupId !== -1) {
+           if (!groupedTabs.has(tab.groupId)) {
+             groupedTabs.set(tab.groupId, []);
            }
+           groupedTabs.get(tab.groupId).push(tab);
+         } else {
+           ungroupedTabs.push(tab);
+         }
        });
-       
-       // ... existing footer code ...
+
+       // Render groups
+       groupedTabs.forEach((tabs, groupId) => {
+         const group = tabs[0].group; // Group data attached during processing
+         html += `<h3>Group: ${group.title || "Unnamed"}</h3>`;
+         tabs.forEach((tab) => {
+           html += `<div class="tab">...tab content...</div>`;
+         });
+       });
+
+       // Render ungrouped tabs
+       if (ungroupedTabs.length > 0) {
+         html += `<h3>Ungrouped Tabs</h3>`;
+         ungroupedTabs.forEach((tab) => {
+           html += `<div class="tab">...tab content...</div>`;
+         });
+       }
+     });
+
+     // ... existing footer code ...
    }
    ```
 
@@ -242,6 +274,7 @@ This guide provides step-by-step instructions for implementing tab groups integr
 **Priority**: Medium - Convenience feature
 
 **Files Modified**:
+
 - `popup.html` - Add checkbox
 - `popup.js` - Add settings handler
 - `utils.js` - Add filtering logic
@@ -249,46 +282,49 @@ This guide provides step-by-step instructions for implementing tab groups integr
 **Steps**:
 
 1. **Add checkbox to popup.html**:
+
    ```html
    <label>
-       <input type="checkbox" id="saveGroupsOnlyCheckbox">
-       Save Groups Only (exclude ungrouped tabs)
+     <input type="checkbox" id="saveGroupsOnlyCheckbox" />
+     Save Groups Only (exclude ungrouped tabs)
    </label>
    <span id="saveGroupsSavedIndicator" class="saved-indicator">✓ Saved</span>
    ```
 
 2. **Add settings handler to popup.js**:
+
    ```javascript
    // Load setting
-   const result = await chrome.storage.local.get(['saveGroupsOnly']);
+   const result = await chrome.storage.local.get(["saveGroupsOnly"]);
    saveGroupsOnlyCheckbox.checked = result.saveGroupsOnly === true;
-   
+
    // Save on change
-   saveGroupsOnlyCheckbox.addEventListener('change', async (e) => {
-       await chrome.storage.local.set({ saveGroupsOnly: e.target.checked });
-       showSavedIndicator('saveGroupsSavedIndicator');
+   saveGroupsOnlyCheckbox.addEventListener("change", async (e) => {
+     await chrome.storage.local.set({ saveGroupsOnly: e.target.checked });
+     showSavedIndicator("saveGroupsSavedIndicator");
    });
    ```
 
 3. **Add filtering in utils.js**:
+
    ```javascript
    // In saveWindows or similar function
    async function saveWindows() {
-       const settings = await chrome.storage.local.get(['saveGroupsOnly']);
-       let allTabs = await chrome.tabs.query({});
-       
-       // Apply filter if enabled
-       if (settings.saveGroupsOnly) {
-           allTabs = allTabs.filter(tab => tab.groupId !== -1);
-           
-           if (allTabs.length === 0) {
-               // Show message to user
-               console.warn('No grouped tabs found');
-               return;
-           }
+     const settings = await chrome.storage.local.get(["saveGroupsOnly"]);
+     let allTabs = await chrome.tabs.query({});
+
+     // Apply filter if enabled
+     if (settings.saveGroupsOnly) {
+       allTabs = allTabs.filter((tab) => tab.groupId !== -1);
+
+       if (allTabs.length === 0) {
+         // Show message to user
+         console.warn("No grouped tabs found");
+         return;
        }
-       
-       // ... continue with bookmark creation ...
+     }
+
+     // ... continue with bookmark creation ...
    }
    ```
 
@@ -353,19 +389,23 @@ This guide provides step-by-step instructions for implementing tab groups integr
 ## Deployment
 
 1. **Test thoroughly in development**:
+
    - Load extension unpacked in Chrome
    - Test all user stories with acceptance scenarios
    - Verify edge cases handled
 
 2. **Update version number in manifest.json**:
+
    - Increment minor version (e.g., 1.0 → 1.1)
 
 3. **Update README.md**:
+
    - Document new features
    - Add usage instructions for tab groups
    - Note new settings options
 
 4. **Create pull request**:
+
    - Reference feature spec
    - Include testing checklist results
    - Add screenshots if applicable

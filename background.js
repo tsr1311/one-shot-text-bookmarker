@@ -2,6 +2,7 @@
 const windowCreationTimes = new Map();
 const tabCreationTimes = new Map();
 const urlFirstVisits = new Map(); // Cache for URL first visit times
+const tabGroups = new Map(); // Cache for tab group data
 
 // Store system environment info
 let environmentInfo = null;
@@ -93,12 +94,26 @@ async function initializeExistingTimestamps() {
     }
 }
 
+// Update tab groups cache
+async function updateGroupData() {
+    try {
+        const groups = await chrome.tabGroups.query({});
+        tabGroups.clear();
+        groups.forEach(group => {
+            tabGroups.set(group.id, group);
+        });
+    } catch (error) {
+        console.error('Failed to update group data:', error);
+    }
+}
+
 // Initialize timestamps and environment info when extension loads
 Promise.all([
     initializeExistingTimestamps(),
     getEnvironmentInfo().then(info => {
         environmentInfo = info;
-    })
+    }),
+    updateGroupData()
 ]);
 
 // Track window creation
@@ -129,6 +144,13 @@ chrome.tabs.onCreated.addListener(async (tab) => {
     }
 });
 
+// Track tab group changes
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.groupId !== undefined) {
+        updateGroupData();
+    }
+});
+
 // Clean up when windows/tabs are removed
 chrome.windows.onRemoved.addListener((windowId) => {
     windowCreationTimes.delete(windowId);
@@ -141,12 +163,13 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getTimestamps") {
-        // Return timestamps, URL cache, and environment info
+        // Return timestamps, URL cache, environment info, and group data
         sendResponse({
             windows: Array.from(windowCreationTimes.entries()),
             tabs: Array.from(tabCreationTimes.entries()),
             urlVisits: Array.from(urlFirstVisits.entries()),
-            environment: environmentInfo
+            environment: environmentInfo,
+            groups: Array.from(tabGroups.entries())
         });
     }
     return true; // Keep the message channel open for async response

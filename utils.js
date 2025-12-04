@@ -15,6 +15,17 @@ function sanitizePath(path) {
         .replace(/^\/+/, '');        // Remove leading slashes (must be relative)
 }
 
+// Sanitize group name for use in bookmark folder names
+function sanitizeGroupName(groupTitle, groupId) {
+    if (!groupTitle || groupTitle.trim() === '') {
+        return `Group-${groupId}`;
+    }
+    return groupTitle
+        .replace(/[/\\:*?"<>|`]/g, '_')
+        .trim()
+        .slice(0, 50);
+}
+
 // Get or create the main OSB folder for all saved windows
 async function getOrCreateMainFolder(envDescriptor) {
     const mainFolderName = `OSBed-${envDescriptor}`;
@@ -316,7 +327,7 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
             // Create HTML content with metadata
             const htmlContent = `<!-- url: ${pageData.url} -->
 <!-- url-domain: ${pageData.domain} -->
-<!-- saved_ts: ${new Date().toISOString()} -->
+<!-- url-ts-saved: ${new Date().toISOString()} -->
 <!-- page-title: ${escapeHtml(pageData.title)} -->
 ${pageData.html}`;
 
