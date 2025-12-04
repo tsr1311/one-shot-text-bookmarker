@@ -1,0 +1,249 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tab Group Data Contract",
+  "description": "Data structures for tab groups integration in One-Shot Bookmarker",
+  "definitions": {
+    "TabGroup": {
+      "type": "object",
+      "description": "Chrome browser tab group with metadata",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Unique identifier for the tab group"
+        },
+        "title": {
+          "type": "string",
+          "description": "User-defined name for the group (may be empty)"
+        },
+        "color": {
+          "type": "string",
+          "enum": ["grey", "blue", "red", "yellow", "green", "pink", "purple", "cyan", "orange"],
+          "description": "Group color theme"
+        },
+        "collapsed": {
+          "type": "boolean",
+          "description": "Whether the group is collapsed"
+        },
+        "windowId": {
+          "type": "number",
+          "description": "ID of the window containing this group"
+        }
+      },
+      "required": ["id", "title", "color", "collapsed", "windowId"]
+    },
+    "GroupedTab": {
+      "type": "object",
+      "description": "Tab with group membership information",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Tab ID"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Tab URL"
+        },
+        "title": {
+          "type": "string",
+          "description": "Tab title"
+        },
+        "groupId": {
+          "type": "number",
+          "description": "Group ID (-1 for ungrouped)"
+        },
+        "groupName": {
+          "type": ["string", "null"],
+          "description": "Sanitized group name for filesystem"
+        },
+        "groupContext": {
+          "type": "string",
+          "description": "Group context for HTML metadata"
+        },
+        "windowId": {
+          "type": "number",
+          "description": "Window ID"
+        }
+      },
+      "required": ["id", "url", "title", "groupId", "windowId"]
+    },
+    "BookmarkPathStructure": {
+      "type": "object",
+      "description": "Configuration for bookmark folder hierarchy",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "enum": ["window-group"],
+          "description": "Path pattern name"
+        },
+        "template": {
+          "type": "string",
+          "description": "Resolved path template"
+        }
+      },
+      "required": ["pattern", "template"]
+    },
+    "GroupFilter": {
+      "type": "object",
+      "description": "Filter configuration for Save Groups feature",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether to filter for grouped tabs only"
+        },
+        "includeUngrouped": {
+          "type": "boolean",
+          "description": "Whether to include ungrouped tabs"
+        }
+      },
+      "required": ["enabled", "includeUngrouped"]
+    },
+    "WindowData": {
+      "type": "object",
+      "description": "Window information with groups for overview HTML",
+      "properties": {
+        "windowId": {
+          "type": "number",
+          "description": "Window ID"
+        },
+        "windowName": {
+          "type": "string",
+          "description": "Formatted window folder name"
+        },
+        "groups": {
+          "type": "array",
+          "description": "Tab groups in this window",
+          "items": {
+            "$ref": "#/definitions/GroupData"
+          }
+        },
+        "ungroupedTabs": {
+          "type": "array",
+          "description": "Tabs not in any group",
+          "items": {
+            "$ref": "#/definitions/TabData"
+          }
+        }
+      },
+      "required": ["windowId", "windowName", "groups", "ungroupedTabs"]
+    },
+    "GroupData": {
+      "type": "object",
+      "description": "Group with member tabs for overview HTML",
+      "properties": {
+        "groupId": {
+          "type": "number",
+          "description": "Group ID"
+        },
+        "groupName": {
+          "type": "string",
+          "description": "Group name (sanitized)"
+        },
+        "groupColor": {
+          "type": "string",
+          "description": "Group color"
+        },
+        "tabs": {
+          "type": "array",
+          "description": "Tabs in this group",
+          "items": {
+            "$ref": "#/definitions/TabData"
+          }
+        }
+      },
+      "required": ["groupId", "groupName", "groupColor", "tabs"]
+    },
+    "TabData": {
+      "type": "object",
+      "description": "Tab information for overview HTML",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Tab title"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Tab URL"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Tab timestamp (formatted)"
+        },
+        "timestampSource": {
+          "type": "string",
+          "enum": ["history", "creation", "current"],
+          "description": "Source of timestamp"
+        }
+      },
+      "required": ["title", "url", "timestamp", "timestampSource"]
+    },
+    "StorageSettings": {
+      "type": "object",
+      "description": "Extension settings stored in chrome.storage.local",
+      "properties": {
+        "saveGroupsOnly": {
+          "type": "boolean",
+          "default": false,
+          "description": "Filter for grouped tabs only"
+        },
+        "bookmarkPathStructure": {
+          "type": "string",
+          "default": "window-group",
+          "description": "Bookmark hierarchy pattern"
+        },
+        "autoDownloadEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable HTML downloads"
+        },
+        "downloadOverview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Download overview HTML"
+        },
+        "downloadPath": {
+          "type": "string",
+          "default": "",
+          "description": "Download folder path"
+        },
+        "cssSelector": {
+          "type": "string",
+          "default": "",
+          "description": "CSS selector for partial downloads"
+        },
+        "useParentFolders": {
+          "type": "boolean",
+          "default": true,
+          "description": "Organize into parent folders"
+        },
+        "excludeElements": {
+          "type": "string",
+          "default": "",
+          "description": "Elements to exclude from HTML"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "tabGroup": {
+      "$ref": "#/definitions/TabGroup"
+    },
+    "groupedTab": {
+      "$ref": "#/definitions/GroupedTab"
+    },
+    "bookmarkPathStructure": {
+      "$ref": "#/definitions/BookmarkPathStructure"
+    },
+    "groupFilter": {
+      "$ref": "#/definitions/GroupFilter"
+    },
+    "windowData": {
+      "$ref": "#/definitions/WindowData"
+    },
+    "storageSettings": {
+      "$ref": "#/definitions/StorageSettings"
+    }
+  }
+}

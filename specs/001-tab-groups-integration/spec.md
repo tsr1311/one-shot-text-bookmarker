@@ -5,7 +5,7 @@
 **Status**: Draft  
 **Input**: User description: "add tab group data (chrome.tabGroups) and have bookmarks be saved in the following (to be configurable bookmark path: 1SBM/{window-name}/{group-name (if in group)}/. Add to downloaded [...]OneShotBookmarked.htm: window name, group name and group members. Add the option to \"Save Groups\" to only bookmark/save tabs that are in a group. Put the group name as HTML <!-- tab-context: {groupname} --> in the (if saved) saved {page}.html. Add the option to follow window or tab-group path logic, i.e. {window-name}/{group-name}"
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Group-aware bookmark organization (Priority: P1)
 
@@ -100,7 +100,7 @@ Users who primarily work with tab groups want the ability to save only grouped t
 - What happens when the configurable bookmark path setting is changed between saves?
   - Each save operation uses the current setting; previously saved bookmarks remain unchanged
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -117,14 +117,14 @@ Users who primarily work with tab groups want the ability to save only grouped t
 - **FR-011**: System MUST handle unnamed tab groups by assigning a default identifier
 - **FR-012**: System MUST maintain the existing timestamp-based naming conventions while adding group folder hierarchy
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Tab Group**: Browser tab organization feature with properties including group ID, group name, group color, and member tabs
 - **Bookmark Path Structure**: Configuration setting defining the folder hierarchy pattern (window-first vs group-first)
 - **Group Context Metadata**: HTML comment inserted into downloaded files containing the tab's group name
 - **Overview HTML Data**: Enhanced data structure including window names, group names, and group membership relationships
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
