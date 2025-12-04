@@ -602,12 +602,21 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                 }
             }
             
+            // Split page title by '-' and create numbered comments
+            let pageTitleComments = `<!-- page-title: ${escapeHtml(pageData.title)} -->\n`;
+            if (pageData.title && pageData.title.includes('-')) {
+                const titleParts = pageData.title.split('-').map(part => part.trim()).filter(part => part);
+                titleParts.forEach((part, index) => {
+                    const num = String(index + 1).padStart(3, '0');
+                    pageTitleComments += `<!-- page-title-${num}: ${escapeHtml(part)} -->\n`;
+                });
+            }
+            
             // Create HTML content with metadata
             const htmlContent = `<!-- url: ${pageData.url} -->
 <!-- url-domain: ${pageData.domain} -->
 <!-- url-ts-saved: ${new Date().toISOString()} -->
-<!-- page-title: ${escapeHtml(pageData.title)} -->
-${tabContextComment}
+${pageTitleComments}${tabContextComment}
 ${extractedComments}${pageData.html}`;
 
             // Create blob and download
