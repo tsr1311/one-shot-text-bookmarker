@@ -472,11 +472,12 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                     const lines = divExtractionPairs.split('\\n').map(line => line.trim()).filter(line => line);
                     
                     for (const line of lines) {
-                        const colonIndex = line.indexOf(':');
-                        if (colonIndex === -1) continue;
+                        // Split on " : " (space-colon-space) to separate selector from comment name
+                        const separatorIndex = line.indexOf(' : ');
+                        if (separatorIndex === -1) continue;
                         
-                        let attributeSelector = line.substring(0, colonIndex).trim();
-                        const commentName = line.substring(colonIndex + 1).trim();
+                        let attributeSelector = line.substring(0, separatorIndex).trim();
+                        const commentName = line.substring(separatorIndex + 3).trim();
                         
                         if (!attributeSelector || !commentName) continue;
                         
