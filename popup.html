@@ -175,6 +175,17 @@
         </div>
         <div id="excludeSavedIndicator" class="settings-saved">✓ Saved</div>
     </div>
+
+    <div id="divExtractionDiv" style="display: none; margin-top: 10px; margin-left: 20px;">
+        <label for="divExtractionInput" style="font-size: 12px; color: #333;">DIV Content Extraction (optional):</label>
+        <textarea id="divExtractionInput" placeholder="DIV-attributes : comment-name&#10;e.g., data-company-name=&quot;true&quot; : company" style="width: 95%; margin-top: 5px; padding: 4px; height: 60px; font-size: 11px; font-family: monospace; resize: vertical;"></textarea>
+        <div style="font-size: 11px; color: #666; margin-top: 5px;">
+            Extract text from DIVs matching attributes. Format: <code>attribute-selector : name</code><br>
+            Example: <code>data-testid="companyName" : company</code><br>
+            Creates: <code>&lt;!-- company: Extracted Text --&gt;</code>
+        </div>
+        <div id="divExtractionSavedIndicator" class="settings-saved">✓ Saved</div>
+    </div>
     
     <div id="status"></div>
     <script src="utils.js"></script>

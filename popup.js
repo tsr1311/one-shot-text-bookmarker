@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const downloadOverviewCheckbox = document.getElementById('downloadOverviewCheckbox');
     const selectorDiv = document.getElementById('selectorDiv');
     const excludeElementsDiv = document.getElementById('excludeElementsDiv');
+    const divExtractionDiv = document.getElementById('divExtractionDiv');
     const folderStructureDiv = document.getElementById('folderStructureDiv');
     const useParentFoldersCheckbox = document.getElementById('useParentFoldersCheckbox');
     const downloadPathInput = document.getElementById('downloadPathInput');
@@ -11,15 +12,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mainFolderPreview = document.getElementById('mainFolderPreview');
     const selectorInput = document.getElementById('selectorInput');
     const excludeElementsInput = document.getElementById('excludeElementsInput');
+    const divExtractionInput = document.getElementById('divExtractionInput');
 
     try {
-        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements', 'bookmarkPathStructure', 'saveGroupsOnly', 'mainFolderTemplate']);
+        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements', 'bookmarkPathStructure', 'saveGroupsOnly', 'mainFolderTemplate', 'divExtractionPairs']);
         
         // Handle auto-download checkbox
         checkbox.checked = result.autoDownloadEnabled === true;
         if (checkbox.checked) {
             selectorDiv.style.display = 'block';
             excludeElementsDiv.style.display = 'block';
+            divExtractionDiv.style.display = 'block';
             folderStructureDiv.style.display = 'block';
         }
 
@@ -49,6 +52,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             excludeElementsInput.value = result.excludeElements;
         }
 
+        // Handle DIV extraction pairs input
+        if (result.divExtractionPairs) {
+            divExtractionInput.value = result.divExtractionPairs;
+        }
+
         // Handle bookmark path structure (default to 'window-group')
         const pathStructure = result.bookmarkPathStructure || 'window-group';
         const pathStructureRadios = document.querySelectorAll('input[name="bookmarkPathStructure"]');
@@ -70,6 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isChecked = checkbox.checked;
         selectorDiv.style.display = isChecked ? 'block' : 'none';
         excludeElementsDiv.style.display = isChecked ? 'block' : 'none';
+        divExtractionDiv.style.display = isChecked ? 'block' : 'none';
         folderStructureDiv.style.display = isChecked ? 'block' : 'none';
     });
 
@@ -157,6 +166,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             showSavedIndicator('excludeSavedIndicator');
         } catch (error) {
             console.error('Failed to save exclude elements:', error);
+        }
+    });
+
+    // Save DIV extraction pairs when it changes
+    divExtractionInput.addEventListener('change', async (e) => {
+        try {
+            await chrome.storage.local.set({ divExtractionPairs: e.target.value });
+            showSavedIndicator('divExtractionSavedIndicator');
+        } catch (error) {
+            console.error('Failed to save DIV extraction pairs:', error);
         }
     });
 
@@ -293,6 +312,7 @@ async function saveWindows(windows, downloadPath) {
     const useParentFolders = document.getElementById('useParentFoldersCheckbox').checked;
     const selector = document.getElementById('selectorInput').value;
     const excludeElements = document.getElementById('excludeElementsInput').value;
+    const divExtractionPairs = document.getElementById('divExtractionInput').value;
 
     // Load settings
     const settings = await chrome.storage.local.get(['bookmarkPathStructure', 'saveGroupsOnly', 'mainFolderTemplate']);
@@ -502,7 +522,7 @@ async function saveWindows(windows, downloadPath) {
                     // Flat structure: just use base path (or Downloads root if empty)
                     windowFolderPath = sanitizedPath || 'OneShot-Bookmarks';
                 }
-                await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap);
+                await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap, divExtractionPairs);
             }
         }
 

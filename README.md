@@ -1,5 +1,6 @@
 # One-Shot Bookmarker
-Helps you organize and archive your browser windows and tabs 
+
+Helps you organize and archive your browser windows and tabs
 by bookmarking into a structured bookmark hierarchy with timestamp-based naming and tab group support.
 
 ## Core Functionality
@@ -20,9 +21,11 @@ OSBed-Mac/20241204/                         # Customizable main folder (see temp
 ## Features
 
 ### Configurable Main Folder Template (NEW)
+
 Customize how your main bookmark folder is structured using template variables:
 
 **Available Variables:**
+
 - `{YYYYMMDD}` - Current date (e.g., 20241204)
 - `{HHMM}` - Current time (e.g., 1430)
 - `{OS-environment}` - OS descriptor (OSBed-Mac, OSBed-Win, OSBed-Linux)
@@ -32,6 +35,7 @@ Customize how your main bookmark folder is structured using template variables:
 
 **Default Template:** `{OS-environment}/{YYYYMMDD}/`
 **Examples:**
+
 - `Work/{YYYYMMDD}/{HHMM}/` → `Work/20241204/1430/`
 - `{OS-environment}/Projects/{Window-Name}/` → `OSBed-Mac/Projects/My-Project/`
 - `Archive/{YYYYMMDD}-{Group-Name}/` → `Archive/20241204-Research/`
@@ -39,45 +43,55 @@ Customize how your main bookmark folder is structured using template variables:
 The UI shows a live preview of your template with current values.
 
 ### Tab Groups Support (NEW)
+
 Organize bookmarks and downloads by tab groups:
 
 **Group-Aware Bookmarks:**
+
 - Tabs in groups are organized under group folders
 - Group names are used for folder names (or "Group-{id}" if unnamed)
 - Ungrouped tabs are saved separately
 - Structure: `MainFolder/WindowFolder/GroupFolder/TabFolder/Bookmark`
 
 **Save Groups Only Filter:**
+
 - Enable to save only tabs that belong to tab groups
 - Ignores ungrouped tabs when enabled
 - Shows warning if no grouped tabs are found
 - Useful for focused archiving of organized work
 
 **Group Context in Downloads:**
+
 - Downloaded HTML files include `<!-- tab-context: GroupName -->` comments
 - Matches bookmark folder structure for consistency
 - Same hierarchy: downloads mirror bookmark organization
 
 **Enhanced Overview HTML:**
+
 - Groups tabs by their tab groups
 - Shows group names with visual styling
 - Displays member count for each group
 - Highlights ungrouped tabs separately
 
 ### Tab-Level Folders (NEW)
+
 Each tab now gets its own folder for better organization:
 
 **Structure:**
+
 - **Grouped tabs:** `MainFolder/WindowFolder/GroupFolder/TabFolder/Bookmark`
 - **Ungrouped tabs:** `MainFolder/WindowFolder/TabFolder/Bookmark`
 
 **Tab Folder Naming:**
+
 - Uses tab title (sanitized and truncated to 24 chars)
 - Falls back to `tab-{id}` if title is empty
 - Same structure for both bookmarks and downloads
 
 ### Window Folder Naming (UPDATED)
+
 **Priority order:**
+
 1. Window name (if set via browser extensions or custom naming)
 2. First tab's title
 3. `win-{id}` (fallback using window ID)
@@ -86,15 +100,18 @@ Format: `YYYYMMDD___(k)tab_winN___WindowName`
 Example: `20241204___(4)tab_win1___My-Project`
 
 ### Smart Timestamp System
+
 The extension uses a sophisticated system to determine the most accurate dates for both folders and bookmarks:
 
 #### Main Folder Names
+
 - Uses template system (configurable)
 - Default: Current date with OS environment descriptor
 - Can include: date, time, OS, window names, group names, custom text
 - Example: `OSBed-Mac/20241204/`
 
 #### Window Folder Names
+
 - Uses the date of the OLDEST tab in that window
 - Includes number of tabs in the window
 - Includes window number (win1, win2, etc.)
@@ -103,13 +120,16 @@ The extension uses a sophisticated system to determine the most accurate dates f
   - Example: `20241204___(4)tab_win1___My-Project`
 
 #### Tab Folder Names (NEW)
+
 - Uses sanitized tab title (max 24 characters)
 - Falls back to `tab-{id}` if title is empty
 - Contains the actual bookmark
 - Example: `Amazon-Electronics/` or `tab-123/`
 
 #### Individual Tab Bookmarks
+
 The extension determines tab timestamps in this priority order:
+
 1. **URL Visit Time** (most accurate)
    - Fetched from browser history
    - Represents the first time you ever visited this URL
@@ -123,6 +143,7 @@ Format: `YYYYMMDD_HHMMSS TabTitle`
 Example: `20241204_143022 GitHub - My Repository`
 
 ### Advanced Features
+
 - **Configurable Folder Structure**: Template-based main folder with live preview
 - **Tab Groups Integration**: Organize by tab groups with filter option
 - **Tab-Level Organization**: Each tab in its own folder
@@ -141,24 +162,30 @@ Example: `20241204_143022 GitHub - My Repository`
 ## Settings
 
 ### Main Folder Template
+
 Configure the path structure for your bookmarks and downloads:
+
 - **Input**: Text field with template variables
 - **Variables**: {YYYYMMDD}, {HHMM}, {OS-environment}, {Window-Name}, {Group-Name}
 - **Preview**: Live preview showing resolved path
 - **Default**: `{OS-environment}/{YYYYMMDD}/`
 
 ### Download Folder
+
 Base path for downloaded HTML files (relative to Downloads folder):
+
 - **Input**: Text field with optional Browse button
 - **Example**: `Bookmarks` or `Work/Projects`
 - **Result**: Files saved to `~/Downloads/[your-path]/[main-template]/[window]/[group]/[tab]/file.html`
 
 ### Download Options
+
 - **Download bookmarks.html**: Save overview HTML file with all tabs (default: enabled)
 - **Auto-download tab contents**: Save each tab as HTML file (default: disabled)
 - **Save Groups Only**: Only save tabs in tab groups, ignore ungrouped tabs (default: disabled)
 
 ### Advanced Options
+
 - **Organize in parent folders**: Create subfolder hierarchy (default: enabled)
   - Enabled: `basePath/mainFolder/windowFolder/groupFolder/tabFolder/file.html`
   - Disabled: Flat structure in base path only
@@ -169,6 +196,7 @@ Base path for downloaded HTML files (relative to Downloads folder):
 ## Folder Structure Examples
 
 ### Full Hierarchy (with groups and tab folders)
+
 ```
 ~/Downloads/Bookmarks/OSBed-Mac/20241204/
 └── 20241204___(8)tab_win1___Research-Project/
@@ -183,6 +211,7 @@ Base path for downloaded HTML files (relative to Downloads folder):
 ```
 
 ### Bookmarks Hierarchy
+
 ```
 Bookmarks Bar/
 └── OSBed-Mac/
@@ -199,6 +228,7 @@ Bookmarks Bar/
 ```
 
 ### With Save Groups Only (filters out ungrouped tabs)
+
 Only tabs in "Research" and "Shopping" groups are saved; ungrouped tabs are ignored.
 
 ## Installation
@@ -215,4 +245,3 @@ Only tabs in "Research" and "Shopping" groups are saved; ungrouped tabs are igno
 3. All your open windows and tabs will be saved as bookmarks in a new folder named with today's date (YYYYMMDD)
 4. Each window's tabs will be in a subfolder named with its creation date
 5. Each bookmark will be prefixed with its tab's creation timestamp
-

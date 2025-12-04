@@ -415,7 +415,7 @@ async function createPlaceholderFile(folderPath) {
 // Download tab content as HTML file
 // Note: Some pages (like chrome://, chrome-extension://, Google Drive, etc.) cannot be accessed
 // due to browser security restrictions. These will be skipped gracefully.
-async function downloadTabContent(tab, folderPath, filePrefix, selector, excludeElements, groupName = null) {
+async function downloadTabContent(tab, folderPath, filePrefix, selector, excludeElements, groupName = null, divExtractionPairs = '') {
     try {
         // Create a safe filename from the tab title
         const safeTitle = (tab.title || 'untitled')
@@ -432,7 +432,7 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
         // Execute script to get page content
         const results = await chrome.scripting.executeScript({
             target: { tabId: tab.id },
-            func: (selector, excludeElements) => {
+            func: (selector, excludeElements, divExtractionPairs) => {
                 let content = '';
                 if (selector) {
                     const elements = document.querySelectorAll(selector);
@@ -466,6 +466,53 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                     content = doctype + '\n' + doc.documentElement.outerHTML;
                 }
                 
+                // Extract DIV content based on key:value pairs
+                const extractedData = {};
+                if (divExtractionPairs) {
+                    const lines = divExtractionPairs.split('\\n').map(line => line.trim()).filter(line => line);
+                    
+                    for (const line of lines) {
+                        const colonIndex = line.indexOf(':');
+                        if (colonIndex === -1) continue;
+                        
+                        const attributeSelector = line.substring(0, colonIndex).trim();
+                        const commentName = line.substring(colonIndex + 1).trim();
+                        
+                        if (!attributeSelector || !commentName) continue;
+                        
+                        // Find all DIVs that match the attribute selector
+                        // The selector should be attributes like: data-company-name="true" data-testid="companyName"
+                        const divs = document.querySelectorAll('div');
+                        
+                        for (const div of divs) {
+                            // Check if the div's outerHTML contains all the attributes specified
+                            const outerHTML = div.outerHTML;
+                            const attributes = attributeSelector.split(/\\s+/);
+                            let allMatch = true;
+                            
+                            for (const attr of attributes) {
+                                if (!outerHTML.includes(attr)) {
+                                    allMatch = false;
+                                    break;
+                                }
+                            }
+                            
+                            if (allMatch) {
+                                // Extract visible text content (excluding HTML tags)
+                                const textContent = div.textContent || div.innerText || '';
+                                const cleanedText = textContent.trim();
+                                
+                                if (cleanedText) {
+                                    // Store first match for this comment name
+                                    if (!extractedData[commentName]) {
+                                        extractedData[commentName] = cleanedText;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // Extract domain from URL
                 let domain = '';
                 try {
@@ -479,10 +526,11 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                     html: content,
                     title: document.title,
                     url: window.location.href,
-                    domain: domain
+                    domain: domain,
+                    extractedData: extractedData
                 };
             },
-            args: [selector, excludeElements]
+            args: [selector, excludeElements, divExtractionPairs]
         });
 
         if (results && results[0] && results[0].result) {
@@ -492,13 +540,21 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
             const groupContext = groupName ? groupName : 'ungrouped';
             const tabContextComment = `<!-- tab-context: ${escapeHtml(groupContext)} -->`;
             
+            // Generate extracted data comments
+            let extractedComments = '';
+            if (pageData.extractedData && Object.keys(pageData.extractedData).length > 0) {
+                for (const [name, value] of Object.entries(pageData.extractedData)) {
+                    extractedComments += `<!-- ${escapeHtml(name)}: ${escapeHtml(value)} -->\n`;
+                }
+            }
+            
             // Create HTML content with metadata
             const htmlContent = `<!-- url: ${pageData.url} -->
 <!-- url-domain: ${pageData.domain} -->
 <!-- url-ts-saved: ${new Date().toISOString()} -->
 <!-- page-title: ${escapeHtml(pageData.title)} -->
 ${tabContextComment}
-${pageData.html}`;
+${extractedComments}${pageData.html}`;
 
             // Create blob and download
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
@@ -529,7 +585,7 @@ ${pageData.html}`;
 }
 
 // Download all tabs content in a window with group and tab folder structure
-async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap = null) {
+async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap = null, divExtractionPairs = '') {
     // Group tabs by groupId (matching bookmark structure)
     const tabsByGroup = new Map();
     const ungroupedTabs = [];
@@ -562,7 +618,7 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
             const tabFolderPath = `${windowFolderPath}/${groupName}/${tabFolderName}`;
             
             downloadPromises.push(
-                downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, groupName)
+                downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, groupName, divExtractionPairs)
                     .catch(error => console.error(`Error downloading grouped tab ${tab.title}:`, error))
             );
         }
@@ -579,7 +635,7 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
         const tabFolderPath = `${windowFolderPath}/${tabFolderName}`;
         
         downloadPromises.push(
-            downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, null)
+            downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, null, divExtractionPairs)
                 .catch(error => console.error(`Error downloading ungrouped tab ${tab.title}:`, error))
         );
     }
