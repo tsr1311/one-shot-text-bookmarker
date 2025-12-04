@@ -204,12 +204,16 @@
 
     <div id="divExtractionDiv" style="display: none; margin-top: 10px; margin-left: 20px;">
         <label for="divExtractionInput" style="font-size: 12px; color: #333;">Element Content Extraction (optional):</label>
-        <textarea id="divExtractionInput" placeholder="element:attributes : comment-name&#10;e.g., div:data-company=&quot;true&quot; : company&#10;     meta:property=&quot;og:description&quot; : description" style="width: 95%; margin-top: 5px; padding: 4px; height: 70px; font-size: 11px; font-family: monospace; resize: vertical;"></textarea>
+        <textarea id="divExtractionInput" placeholder="element:attributes : comment-name&#10;e.g., div:data-company=&quot;true&quot; : company&#10;     meta:property=&quot;og:description&quot; : description&#10;     script:type=&quot;application/ld+json&quot;::title : job-title" style="width: 95%; margin-top: 5px; padding: 4px; height: 85px; font-size: 11px; font-family: monospace; resize: vertical;"></textarea>
         <div style="font-size: 11px; color: #666; margin-top: 5px;">
             Extract text/content from elements. Format: <code>element:attributes : name</code><br>
-            Elements: <code>div</code> (default), <code>meta</code>, <code>span</code>, <code>a</code>, <code>article</code><br>
-            Example: <code>meta:property="og:description" : company</code><br>
-            Creates: <code>&lt;!-- company: Extracted Text --&gt;</code>
+            Elements: <code>div</code> (default), <code>meta</code>, <code>span</code>, <code>a</code>, <code>article</code>, <code>script</code><br>
+            JSON Path: <code>script:type="application/ld+json"::jsonPath : name</code><br>
+            Examples:<br>
+            • <code>meta:property="og:description" : description</code><br>
+            • <code>script:type="application/ld+json"::title : job-title</code><br>
+            • <code>script:type="application/ld+json"::hiringOrganization.name : company</code><br>
+            Creates: <code>&lt;!-- name: Extracted Value --&gt;</code>
         </div>
         <div id="divExtractionSavedIndicator" class="settings-saved">✓ Saved</div>
     </div>

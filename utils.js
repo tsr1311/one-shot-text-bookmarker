@@ -483,12 +483,21 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                         
                         // Check if selector specifies element type (e.g., "meta:property='og:description'")
                         let elementType = 'div'; // default
+                        let jsonPath = null; // for JSON extraction from script tags
+                        
                         if (attributeSelector.includes(':')) {
                             const parts = attributeSelector.split(':');
-                            if (parts[0].match(/^(meta|div|span|a|article|section|header)$/i)) {
+                            if (parts[0].match(/^(meta|div|span|a|article|section|header|script)$/i)) {
                                 elementType = parts[0].toLowerCase();
                                 attributeSelector = parts.slice(1).join(':');
                             }
+                        }
+                        
+                        // Check for JSON path extraction (e.g., "script[type="application/ld+json"]::title")
+                        if (elementType === 'script' && attributeSelector.includes('::')) {
+                            const pathSeparatorIndex = attributeSelector.indexOf('::');
+                            jsonPath = attributeSelector.substring(pathSeparatorIndex + 2).trim();
+                            attributeSelector = attributeSelector.substring(0, pathSeparatorIndex).trim();
                         }
                         
                         // Find all elements of specified type that match the attribute selector
@@ -510,8 +519,33 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                             if (allMatch) {
                                 let extractedText = '';
                                 
-                                // For meta tags, extract the content attribute
-                                if (elementType === 'meta') {
+                                // For script tags with JSON, extract and parse
+                                if (elementType === 'script' && jsonPath) {
+                                    try {
+                                        const jsonContent = element.textContent || element.innerText || '';
+                                        const jsonData = JSON.parse(jsonContent);
+                                        
+                                        // Navigate the JSON path (e.g., "title" or "hiringOrganization.name")
+                                        const pathParts = jsonPath.split('.');
+                                        let value = jsonData;
+                                        
+                                        for (const part of pathParts) {
+                                            if (value && typeof value === 'object' && part in value) {
+                                                value = value[part];
+                                            } else {
+                                                value = null;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        if (value !== null && value !== undefined) {
+                                            extractedText = typeof value === 'string' ? value : JSON.stringify(value);
+                                        }
+                                    } catch (e) {
+                                        console.error('JSON extraction error:', e);
+                                    }
+                                } else if (elementType === 'meta') {
+                                    // For meta tags, extract the content attribute
                                     extractedText = element.getAttribute('content') || '';
                                 } else {
                                     // For other elements, extract visible text content
