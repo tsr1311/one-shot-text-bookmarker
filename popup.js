@@ -1,18 +1,22 @@
 // Load saved settings when popup opens
 document.addEventListener('DOMContentLoaded', async () => {
     const checkbox = document.getElementById('autoDownloadCheckbox');
+    const downloadOverviewCheckbox = document.getElementById('downloadOverviewCheckbox');
     const selectorDiv = document.getElementById('selectorDiv');
     const downloadPathInput = document.getElementById('downloadPathInput');
     const selectorInput = document.getElementById('selectorInput');
 
     try {
-        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadPath', 'cssSelector']);
+        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector']);
         
         // Handle auto-download checkbox
         checkbox.checked = result.autoDownloadEnabled === true;
         if (checkbox.checked) {
             selectorDiv.style.display = 'block';
         }
+
+        // Handle download overview checkbox (default to true)
+        downloadOverviewCheckbox.checked = result.downloadOverview !== false;
 
         // Handle download path input
         if (result.downloadPath) {
@@ -128,6 +132,15 @@ document.getElementById('autoDownloadCheckbox').addEventListener('change', async
     }
 });
 
+// Save download overview checkbox state when it changes
+document.getElementById('downloadOverviewCheckbox').addEventListener('change', async (e) => {
+    try {
+        await chrome.storage.local.set({ downloadOverview: e.target.checked });
+    } catch (error) {
+        console.error('Failed to save download overview setting:', error);
+    }
+});
+
 document.getElementById('saveButton').addEventListener('click', async () => {
     const allWindows = await chrome.windows.getAll({ populate: true });
     const downloadPath = document.getElementById('downloadPathInput').value;
@@ -143,6 +156,7 @@ document.getElementById('saveCurrentWindowButton').addEventListener('click', asy
 async function saveWindows(windows, downloadPath) {
     const statusDiv = document.getElementById('status');
     const autoDownloadEnabled = document.getElementById('autoDownloadCheckbox').checked;
+    const downloadOverviewEnabled = document.getElementById('downloadOverviewCheckbox').checked;
     const selector = document.getElementById('selectorInput').value;
 
     // Sanitize the download path - allow absolute paths or subfolder names
@@ -168,20 +182,22 @@ async function saveWindows(windows, downloadPath) {
         const mainFolderName = formatMainFolderName(today, windows.length, totalTabs);
         const mainFolder = await createBookmarkFolder(mainFolderName, null, envDescriptor);
 
-        // Generate and save overview HTML
-        const overviewHtml = generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor);
-        const blob = new Blob([overviewHtml], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
+        // Generate and save overview HTML if enabled
+        if (downloadOverviewEnabled) {
+            const overviewHtml = generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor);
+            const blob = new Blob([overviewHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
 
-        const overviewFilename = sanitizedPath 
-            ? `${sanitizedPath}/${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`
-            : `${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`;
+            const overviewFilename = sanitizedPath 
+                ? `${sanitizedPath}/${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`
+                : `${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`;
 
-        await chrome.downloads.download({
-            url: url,
-            filename: overviewFilename,
-            saveAs: false
-        });
+            await chrome.downloads.download({
+                url: url,
+                filename: overviewFilename,
+                saveAs: false
+            });
+        }
 
         // Process each window with index for win# suffix
         for (let windowIndex = 0; windowIndex < windows.length; windowIndex++) {

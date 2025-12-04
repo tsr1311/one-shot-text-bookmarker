@@ -293,7 +293,7 @@ ${pageData.html}`;
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             
-            const filename = `${folderPath}/${filePrefix}_${safeTitle}.html`;
+            const filename = `${folderPath}/${safeTitle}.html`;
             
             await chrome.downloads.download({
                 url: url,
