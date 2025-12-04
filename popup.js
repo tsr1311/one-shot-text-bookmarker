@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const excludeElementsInput = document.getElementById('excludeElementsInput');
 
     try {
-        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements', 'bookmarkPathStructure']);
+        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements', 'bookmarkPathStructure', 'saveGroupsOnly']);
         
         // Handle auto-download checkbox
         checkbox.checked = result.autoDownloadEnabled === true;
@@ -50,6 +50,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 radio.checked = true;
             }
         });
+
+        // Handle save groups only checkbox (default to false)
+        const saveGroupsOnlyCheckbox = document.getElementById('saveGroupsOnlyCheckbox');
+        saveGroupsOnlyCheckbox.checked = result.saveGroupsOnly === true;
 
     } catch (error) {
         console.error('Failed to load settings:', error);
@@ -199,6 +203,21 @@ document.getElementById('useParentFoldersCheckbox').addEventListener('change', a
     }
 });
 
+// Save groups only checkbox state when it changes
+document.getElementById('saveGroupsOnlyCheckbox').addEventListener('change', async (e) => {
+    try {
+        await chrome.storage.local.set({ saveGroupsOnly: e.target.checked });
+        // Show saved indicator
+        const indicator = document.getElementById('groupsSavedIndicator');
+        indicator.classList.add('show');
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 2000);
+    } catch (error) {
+        console.error('Failed to save groups only setting:', error);
+    }
+});
+
 document.getElementById('saveButton').addEventListener('click', async () => {
     const allWindows = await chrome.windows.getAll({ populate: true });
     const downloadPath = document.getElementById('downloadPathInput').value;
@@ -219,9 +238,10 @@ async function saveWindows(windows, downloadPath) {
     const selector = document.getElementById('selectorInput').value;
     const excludeElements = document.getElementById('excludeElementsInput').value;
 
-    // Load bookmark path structure setting
-    const settings = await chrome.storage.local.get(['bookmarkPathStructure']);
+    // Load settings
+    const settings = await chrome.storage.local.get(['bookmarkPathStructure', 'saveGroupsOnly']);
     const bookmarkPathStructure = settings.bookmarkPathStructure || 'window-group';
+    const saveGroupsOnly = settings.saveGroupsOnly === true;
 
     // Sanitize the download path - allow absolute paths or subfolder names
     const sanitizedPath = sanitizePath(downloadPath);
@@ -252,6 +272,25 @@ async function saveWindows(windows, downloadPath) {
 
         // Calculate total tabs
         const totalTabs = windows.reduce((sum, win) => sum + win.tabs.length, 0);
+
+        // If "Save Groups Only" is enabled, check if there are any grouped tabs across all windows
+        if (saveGroupsOnly) {
+            let hasGroupedTabs = false;
+            for (const window of windows) {
+                for (const tab of window.tabs) {
+                    if (tab.groupId !== undefined && tab.groupId !== -1) {
+                        hasGroupedTabs = true;
+                        break;
+                    }
+                }
+                if (hasGroupedTabs) break;
+            }
+
+            if (!hasGroupedTabs) {
+                statusDiv.textContent = 'No grouped tabs found. Disable "Save Groups Only" to save all tabs.';
+                return; // Exit early
+            }
+        }
 
         // Create main folder with window and tab counts
         const today = new Date();
@@ -317,6 +356,17 @@ async function saveWindows(windows, downloadPath) {
                 } else {
                     ungroupedTabs.push(tab);
                 }
+            }
+
+            // Apply "Save Groups Only" filter if enabled
+            if (saveGroupsOnly) {
+                // Check if there are any grouped tabs
+                if (tabsByGroup.size === 0) {
+                    console.warn(`Window ${windowIndex + 1}: No grouped tabs found with "Save Groups Only" enabled. Skipping window.`);
+                    continue; // Skip this window
+                }
+                // Clear ungrouped tabs array when filter is enabled
+                ungroupedTabs.length = 0;
             }
 
             // Save grouped tabs with group folders

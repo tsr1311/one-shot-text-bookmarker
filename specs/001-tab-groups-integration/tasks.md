@@ -109,13 +109,13 @@
 
 ### Implementation for User Story 4
 
-- [ ] T030 [US4] Modify generateOverviewHtml() function signature in utils.js to accept groups data
-- [ ] T031 [US4] Group tabs by groupId within each window in generateOverviewHtml() in utils.js
-- [ ] T032 [US4] Create groupedTabs Map and ungroupedTabs array in generateOverviewHtml() in utils.js
-- [ ] T033 [US4] Render group sections with `<h3>Group: {name}</h3>` in generateOverviewHtml() in utils.js
-- [ ] T034 [US4] Render ungrouped tabs section separately in generateOverviewHtml() in utils.js
-- [ ] T035 [US4] Add window name display to overview HTML in generateOverviewHtml() in utils.js
-- [ ] T036 [US4] Pass groups data to generateOverviewHtml() from bookmark save function in utils.js
+- [x] T030 [US4] Modify generateOverviewHtml() function signature in utils.js to accept groups data
+- [x] T031 [US4] Group tabs by groupId within each window in generateOverviewHtml() in utils.js
+- [x] T032 [US4] Create groupedTabs Map and ungroupedTabs array in generateOverviewHtml() in utils.js
+- [x] T033 [US4] Render group sections with `<h3>Group: {name}</h3>` in generateOverviewHtml() in utils.js
+- [x] T034 [US4] Render ungrouped tabs section separately in generateOverviewHtml() in utils.js
+- [x] T035 [US4] Add window name display to overview HTML in generateOverviewHtml() in utils.js
+- [x] T036 [US4] Pass groups data to generateOverviewHtml() from bookmark save function in utils.js
 - [ ] T037 [US4] Test overview HTML shows all groups and their members (manual testing)
 - [ ] T038 [US4] Test overview HTML distinguishes ungrouped tabs (manual testing)
 
