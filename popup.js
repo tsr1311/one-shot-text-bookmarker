@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Use download API with saveAs to let user choose location
             const downloadId = await chrome.downloads.download({
                 url: url,
-                filename: 'one-shot-bookmarker-location.txt',
+                filename: 'OSBM-location.txt',
                 saveAs: true
             });
 
@@ -271,7 +271,9 @@ async function saveWindows(windows, downloadPath) {
             // Get first tab title and create window folder name with window number
             const firstTabTitle = window.tabs[0]?.title || '';
             const windowNumber = windowIndex + 1; // Convert 0-based index to 1-based window number
-            const windowFolderName = formatWindowFolder(oldestTabTime, window.tabs.length, firstTabTitle, windowNumber);
+            // Use window title if available (custom window name), otherwise use first tab title
+            const windowName = window.title || '';
+            const windowFolderName = formatWindowFolder(oldestTabTime, window.tabs.length, firstTabTitle, windowNumber, windowName);
 
             // Create folder for this window under today's folder
             const windowFolder = await createBookmarkFolder(windowFolderName, mainFolder.id);
@@ -294,7 +296,9 @@ async function saveWindows(windows, downloadPath) {
             // Save grouped tabs with group folders
             for (const [groupId, groupTabs] of tabsByGroup) {
                 const group = groupsMap.get(groupId);
-                const groupName = sanitizeGroupName(group?.title || '', groupId);
+                // Use group title if available, otherwise fall back to sanitized default
+                const groupTitle = group?.title || '';
+                const groupName = sanitizeGroupName(groupTitle, groupId);
                 
                 // Create group folder under window folder
                 const groupFolder = await createBookmarkFolder(groupName, windowFolder.id);

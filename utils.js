@@ -53,13 +53,14 @@ function formatMainFolderName(date, windowCount, totalTabs) {
 }
 
 // Format window folder name with date, tab count, first tab title, and window number
-function formatWindowFolder(date, tabCount, firstTabTitle = '', windowNumber = 1) {
+function formatWindowFolder(date, tabCount, firstTabTitle = '', windowNumber = 1, windowName = '') {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
 
-    // Sanitize and trim the first tab title
-    const sanitizedTitle = (firstTabTitle || '')
+    // Use window name if available, otherwise use first tab title
+    const displayName = windowName || firstTabTitle || '';
+    const sanitizedTitle = displayName
         .replace(/[/\\:*?"<>|`]/g, '_')
         .trim()
         .slice(0, MAX_TITLE_LENGTH);
