@@ -3,20 +3,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const checkbox = document.getElementById('autoDownloadCheckbox');
     const downloadOverviewCheckbox = document.getElementById('downloadOverviewCheckbox');
     const selectorDiv = document.getElementById('selectorDiv');
+    const folderStructureDiv = document.getElementById('folderStructureDiv');
+    const useParentFoldersCheckbox = document.getElementById('useParentFoldersCheckbox');
     const downloadPathInput = document.getElementById('downloadPathInput');
     const selectorInput = document.getElementById('selectorInput');
 
     try {
-        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector']);
+        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders']);
         
         // Handle auto-download checkbox
         checkbox.checked = result.autoDownloadEnabled === true;
         if (checkbox.checked) {
             selectorDiv.style.display = 'block';
+            folderStructureDiv.style.display = 'block';
         }
 
         // Handle download overview checkbox (default to true)
         downloadOverviewCheckbox.checked = result.downloadOverview !== false;
+
+        // Handle use parent folders checkbox (default to true)
+        useParentFoldersCheckbox.checked = result.useParentFolders !== false;
 
         // Handle download path input
         if (result.downloadPath) {
@@ -33,7 +39,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     checkbox.addEventListener('change', () => {
-        selectorDiv.style.display = checkbox.checked ? 'block' : 'none';
+        const isChecked = checkbox.checked;
+        selectorDiv.style.display = isChecked ? 'block' : 'none';
+        folderStructureDiv.style.display = isChecked ? 'block' : 'none';
     });
 
     // Show visual feedback when settings are saved
@@ -141,6 +149,15 @@ document.getElementById('downloadOverviewCheckbox').addEventListener('change', a
     }
 });
 
+// Save use parent folders checkbox state when it changes
+document.getElementById('useParentFoldersCheckbox').addEventListener('change', async (e) => {
+    try {
+        await chrome.storage.local.set({ useParentFolders: e.target.checked });
+    } catch (error) {
+        console.error('Failed to save parent folders setting:', error);
+    }
+});
+
 document.getElementById('saveButton').addEventListener('click', async () => {
     const allWindows = await chrome.windows.getAll({ populate: true });
     const downloadPath = document.getElementById('downloadPathInput').value;
@@ -157,6 +174,7 @@ async function saveWindows(windows, downloadPath) {
     const statusDiv = document.getElementById('status');
     const autoDownloadEnabled = document.getElementById('autoDownloadCheckbox').checked;
     const downloadOverviewEnabled = document.getElementById('downloadOverviewCheckbox').checked;
+    const useParentFolders = document.getElementById('useParentFoldersCheckbox').checked;
     const selector = document.getElementById('selectorInput').value;
 
     // Sanitize the download path - allow absolute paths or subfolder names
@@ -245,8 +263,15 @@ async function saveWindows(windows, downloadPath) {
 
             // Download tab contents if auto-download is enabled
             if (autoDownloadEnabled) {
-                const baseFolderPath = sanitizedPath ? `${sanitizedPath}/${mainFolderName}` : mainFolderName;
-                const windowFolderPath = `${baseFolderPath}/${windowFolderName}`;
+                let windowFolderPath;
+                if (useParentFolders) {
+                    // Use parent folder structure: basePath/mainFolder/windowFolder
+                    const baseFolderPath = sanitizedPath ? `${sanitizedPath}/${mainFolderName}` : mainFolderName;
+                    windowFolderPath = `${baseFolderPath}/${windowFolderName}`;
+                } else {
+                    // Flat structure: just use base path (or Downloads root if empty)
+                    windowFolderPath = sanitizedPath || 'OneShot-Bookmarks';
+                }
                 await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector);
             }
         }
