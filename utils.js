@@ -498,7 +498,7 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                             }
                             
                             if (allMatch) {
-                                // Extract visible text content (excluding HTML tags)
+                                // Extract visible text content (textContent gets text without HTML tags)
                                 const textContent = div.textContent || div.innerText || '';
                                 const cleanedText = textContent.trim();
                                 
@@ -585,7 +585,7 @@ ${extractedComments}${pageData.html}`;
 }
 
 // Download all tabs content in a window with group and tab folder structure
-async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap = null, divExtractionPairs = '') {
+async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap = null) {
     // Group tabs by groupId (matching bookmark structure)
     const tabsByGroup = new Map();
     const ungroupedTabs = [];
@@ -618,7 +618,7 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
             const tabFolderPath = `${windowFolderPath}/${groupName}/${tabFolderName}`;
             
             downloadPromises.push(
-                downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, groupName, divExtractionPairs)
+                downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, groupName)
                     .catch(error => console.error(`Error downloading grouped tab ${tab.title}:`, error))
             );
         }
@@ -635,7 +635,7 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
         const tabFolderPath = `${windowFolderPath}/${tabFolderName}`;
         
         downloadPromises.push(
-            downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, null, divExtractionPairs)
+            downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, null)
                 .catch(error => console.error(`Error downloading ungrouped tab ${tab.title}:`, error))
         );
     }
