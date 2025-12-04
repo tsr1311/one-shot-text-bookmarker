@@ -3,18 +3,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const checkbox = document.getElementById('autoDownloadCheckbox');
     const downloadOverviewCheckbox = document.getElementById('downloadOverviewCheckbox');
     const selectorDiv = document.getElementById('selectorDiv');
+    const excludeElementsDiv = document.getElementById('excludeElementsDiv');
     const folderStructureDiv = document.getElementById('folderStructureDiv');
     const useParentFoldersCheckbox = document.getElementById('useParentFoldersCheckbox');
     const downloadPathInput = document.getElementById('downloadPathInput');
     const selectorInput = document.getElementById('selectorInput');
+    const excludeElementsInput = document.getElementById('excludeElementsInput');
 
     try {
-        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders']);
+        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements']);
         
         // Handle auto-download checkbox
         checkbox.checked = result.autoDownloadEnabled === true;
         if (checkbox.checked) {
             selectorDiv.style.display = 'block';
+            excludeElementsDiv.style.display = 'block';
             folderStructureDiv.style.display = 'block';
         }
 
@@ -34,6 +37,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             selectorInput.value = result.cssSelector;
         }
 
+        // Handle exclude elements input
+        if (result.excludeElements) {
+            excludeElementsInput.value = result.excludeElements;
+        }
+
     } catch (error) {
         console.error('Failed to load settings:', error);
     }
@@ -41,6 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     checkbox.addEventListener('change', () => {
         const isChecked = checkbox.checked;
         selectorDiv.style.display = isChecked ? 'block' : 'none';
+        excludeElementsDiv.style.display = isChecked ? 'block' : 'none';
         folderStructureDiv.style.display = isChecked ? 'block' : 'none';
     });
 
@@ -69,6 +78,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             showSavedIndicator('selectorSavedIndicator');
         } catch (error) {
             console.error('Failed to save CSS selector:', error);
+        }
+    });
+
+    // Save exclude elements when it changes
+    excludeElementsInput.addEventListener('change', async (e) => {
+        try {
+            await chrome.storage.local.set({ excludeElements: e.target.value });
+            showSavedIndicator('excludeSavedIndicator');
+        } catch (error) {
+            console.error('Failed to save exclude elements:', error);
         }
     });
 
@@ -176,6 +195,7 @@ async function saveWindows(windows, downloadPath) {
     const downloadOverviewEnabled = document.getElementById('downloadOverviewCheckbox').checked;
     const useParentFolders = document.getElementById('useParentFoldersCheckbox').checked;
     const selector = document.getElementById('selectorInput').value;
+    const excludeElements = document.getElementById('excludeElementsInput').value;
 
     // Sanitize the download path - allow absolute paths or subfolder names
     const sanitizedPath = sanitizePath(downloadPath);
@@ -272,7 +292,7 @@ async function saveWindows(windows, downloadPath) {
                     // Flat structure: just use base path (or Downloads root if empty)
                     windowFolderPath = sanitizedPath || 'OneShot-Bookmarks';
                 }
-                await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector);
+                await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements);
             }
         }
 

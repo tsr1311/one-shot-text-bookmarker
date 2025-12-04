@@ -240,7 +240,7 @@ async function createPlaceholderFile(folderPath) {
 }
 
 // Download tab content as HTML file
-async function downloadTabContent(tab, folderPath, filePrefix, selector) {
+async function downloadTabContent(tab, folderPath, filePrefix, selector, excludeElements) {
     try {
         // Create a safe filename from the tab title
         const safeTitle = (tab.title || 'untitled')
@@ -257,7 +257,7 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector) {
         // Execute script to get page content
         const results = await chrome.scripting.executeScript({
             target: { tabId: tab.id },
-            func: (selector) => {
+            func: (selector, excludeElements) => {
                 let content = '';
                 if (selector) {
                     const elements = document.querySelectorAll(selector);
@@ -269,6 +269,26 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector) {
                         `<!DOCTYPE ${document.doctype.name}${document.doctype.publicId ? ` PUBLIC "${document.doctype.publicId}"` : ''}${document.doctype.systemId ? ` "${document.doctype.systemId}"` : ''}>` : 
                         '<!DOCTYPE html>';
                     content = doctype + '\n' + document.documentElement.outerHTML;
+                }
+                
+                // Remove excluded elements if specified
+                if (excludeElements) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(content, 'text/html');
+                    
+                    // Parse comma-separated list of tags
+                    const tagsToExclude = excludeElements.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    
+                    tagsToExclude.forEach(tag => {
+                        const elements = doc.querySelectorAll(tag);
+                        elements.forEach(el => el.remove());
+                    });
+                    
+                    // Rebuild content from cleaned document
+                    const doctype = document.doctype ? 
+                        `<!DOCTYPE ${document.doctype.name}${document.doctype.publicId ? ` PUBLIC "${document.doctype.publicId}"` : ''}${document.doctype.systemId ? ` "${document.doctype.systemId}"` : ''}>` : 
+                        '<!DOCTYPE html>';
+                    content = doctype + '\n' + doc.documentElement.outerHTML;
                 }
                 
                 // Extract domain from URL
@@ -287,7 +307,7 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector) {
                     domain: domain
                 };
             },
-            args: [selector]
+            args: [selector, excludeElements]
         });
 
         if (results && results[0] && results[0].result) {
@@ -324,7 +344,7 @@ ${pageData.html}`;
 }
 
 // Download all tabs content in a window
-async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector) {
+async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements) {
     const downloadPromises = window.tabs.map(async (tab, tabIndex) => {
         try {
             // Get tab timestamp for filename prefix
@@ -332,7 +352,7 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
             const tabTime = new Date(tabTimestamp);
             const prefix = formatTimestamp(tabTime);
             
-            await downloadTabContent(tab, windowFolderPath, prefix, selector);
+            await downloadTabContent(tab, windowFolderPath, prefix, selector, excludeElements);
         } catch (error) {
             console.error(`Error downloading tab ${tabIndex + 1} in window ${windowIndex + 1}:`, error);
         }
