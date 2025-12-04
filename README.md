@@ -191,7 +191,51 @@ Base path for downloaded HTML files (relative to Downloads folder):
   - Disabled: Flat structure in base path only
 - **CSS Selector**: Optional selector to save only specific page elements
 - **Exclude Elements**: Comma-separated HTML tags to remove (e.g., `img, svg, script`)
+- **DIV Content Extraction** (NEW): Extract text from specific DIV elements into HTML comments
+  - Format: One rule per line: `attribute-selector : comment-name`
+  - Example: `data-testid="companyName" : company`
+  - Finds DIVs with matching attributes, extracts visible text
+  - Creates HTML comment: `<!-- company: Extracted Text -->`
+  - Use cases: Extract job company names, product details, article metadata
 - **Bookmark folder structure**: Choose organization pattern (default: Window → Group)
+
+### DIV Content Extraction Examples
+
+**Example 1: Job Posting Company Name**
+
+```
+Input: data-company-name="true" data-testid="inlineHeader-companyName" : company
+
+Source HTML:
+<div data-company-name="true" data-testid="inlineHeader-companyName">
+  <span><a>T.CON GmbH & Co. KG</a></span>
+</div>
+
+Downloaded HTML:
+<!-- company: T.CON GmbH & Co. KG -->
+```
+
+**Example 2: Multiple Extractions**
+
+```
+Input:
+data-testid="companyName" : company
+data-testid="jobTitle" : position
+class="salary-info" : salary
+
+Result:
+<!-- company: Acme Corp -->
+<!-- position: Senior Developer -->
+<!-- salary: $120,000 - $150,000 -->
+```
+
+**How it works:**
+
+1. Extension finds all `<div>` elements on the page
+2. Checks if each div's HTML contains ALL specified attributes
+3. Extracts only the visible text content (ignores HTML tags)
+4. Injects as HTML comment at top of downloaded file
+5. First match per rule is used
 
 ## Folder Structure Examples
 
