@@ -97,11 +97,13 @@ async function initializeExistingTimestamps() {
 // Update tab groups cache
 async function updateGroupData() {
     try {
-        const groups = await chrome.tabGroups.query({});
-        tabGroups.clear();
-        groups.forEach(group => {
-            tabGroups.set(group.id, group);
-        });
+        if (chrome.tabGroups && chrome.tabGroups.query) {
+            const groups = await chrome.tabGroups.query({});
+            tabGroups.clear();
+            groups.forEach(group => {
+                tabGroups.set(group.id, group);
+            });
+        }
     } catch (error) {
         console.error('Failed to update group data:', error);
     }

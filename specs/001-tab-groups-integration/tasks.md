@@ -19,8 +19,8 @@
 
 **Purpose**: Project initialization and verification
 
-- [X] T001 Verify manifest.json permissions (tabs, bookmarks, storage already present - no changes needed)
-- [X] T002 Review existing code structure (popup.js, popup.html, utils.js, background.js)
+- [x] T001 Verify manifest.json permissions (tabs, bookmarks, storage already present - no changes needed)
+- [x] T002 Review existing code structure (popup.js, popup.html, utils.js, background.js)
 
 ---
 
@@ -30,9 +30,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [X] T003 Add sanitizeGroupName(groupTitle, groupId) function to utils.js (handles empty names, special chars, 50 char limit)
-- [X] T004 Add group data caching to background.js (create tabGroups Map, implement updateGroupData() function)
-- [X] T005 Add tab group update listener to background.js (listen to chrome.tabs.onUpdated for groupId changes)
+- [x] T003 Add sanitizeGroupName(groupTitle, groupId) function to utils.js (handles empty names, special chars, 50 char limit)
+- [x] T004 Add group data caching to background.js (create tabGroups Map, implement updateGroupData() function)
+- [x] T005 Add tab group update listener to background.js (listen to chrome.tabs.onUpdated for groupId changes)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -46,12 +46,12 @@
 
 ### Implementation for User Story 1
 
-- [X] T006 [US1] Modify bookmark creation logic in utils.js to query tab groups (add chrome.tabGroups.query() call)
-- [X] T007 [US1] Create groupsMap in bookmark creation function in utils.js (Map groupId → group object)
-- [X] T008 [US1] Enrich tabs with group data in utils.js (add groupId, groupName, group object to each tab)
-- [X] T009 [US1] Implement group folder creation logic in utils.js (create group folder under window folder for grouped tabs)
-- [X] T010 [US1] Handle ungrouped tabs in utils.js (groupId === -1 saved directly under window folder)
-- [X] T011 [US1] Apply sanitizeGroupName to all group folder names in utils.js
+- [x] T006 [US1] Modify bookmark creation logic in utils.js to query tab groups (add chrome.tabGroups.query() call)
+- [x] T007 [US1] Create groupsMap in bookmark creation function in utils.js (Map groupId → group object)
+- [x] T008 [US1] Enrich tabs with group data in utils.js (add groupId, groupName, group object to each tab)
+- [x] T009 [US1] Implement group folder creation logic in utils.js (create group folder under window folder for grouped tabs)
+- [x] T010 [US1] Handle ungrouped tabs in utils.js (groupId === -1 saved directly under window folder)
+- [x] T011 [US1] Apply sanitizeGroupName to all group folder names in utils.js
 - [ ] T012 [US1] Test with multiple windows with different tab groups (manual testing)
 - [ ] T013 [US1] Test special characters in group names are sanitized correctly (manual testing)
 - [ ] T014 [US1] Test unnamed groups get default "Group-{id}" name (manual testing)

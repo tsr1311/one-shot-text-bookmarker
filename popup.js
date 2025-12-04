@@ -212,9 +212,17 @@ async function saveWindows(windows, downloadPath) {
         };
         const envDescriptor = response.environment?.descriptor || 'unknown';
 
-        // Get tab groups data
-        const groups = await chrome.tabGroups.query({});
-        const groupsMap = new Map(groups.map(g => [g.id, g]));
+        // Get tab groups data (gracefully handle if API not available)
+        let groupsMap = new Map();
+        try {
+            if (chrome.tabGroups && chrome.tabGroups.query) {
+                const groups = await chrome.tabGroups.query({});
+                groupsMap = new Map(groups.map(g => [g.id, g]));
+            }
+        } catch (error) {
+            console.warn('Tab groups API not available:', error);
+            // Continue without group data - tabs will be saved without groups
+        }
 
         // Calculate total tabs
         const totalTabs = windows.reduce((sum, win) => sum + win.tabs.length, 0);
