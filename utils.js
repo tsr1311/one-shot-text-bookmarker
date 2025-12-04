@@ -271,10 +271,20 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector) {
                     content = doctype + '\n' + document.documentElement.outerHTML;
                 }
                 
+                // Extract domain from URL
+                let domain = '';
+                try {
+                    const urlObj = new URL(window.location.href);
+                    domain = urlObj.hostname;
+                } catch (e) {
+                    domain = 'unknown';
+                }
+                
                 return {
                     html: content,
                     title: document.title,
-                    url: window.location.href
+                    url: window.location.href,
+                    domain: domain
                 };
             },
             args: [selector]
@@ -285,6 +295,7 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector) {
             
             // Create HTML content with metadata
             const htmlContent = `<!-- url: ${pageData.url} -->
+<!-- url-domain: ${pageData.domain} -->
 <!-- saved_ts: ${new Date().toISOString()} -->
 <!-- page-title: ${escapeHtml(pageData.title)} -->
 ${pageData.html}`;
