@@ -603,7 +603,14 @@ ${extractedComments}${pageData.html}`;
 }
 
 // Download all tabs content in a window with group and tab folder structure
-async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap = null, divExtractionPairs = '', useDomainSubfolder = false) {
+async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap = null, divExtractionPairs = '', pathOptions = {}) {
+    // Default path options (all enabled for backward compatibility)
+    const {
+        includeYYYYMMDD = true,
+        includeGroupName = true,
+        includeTabDomain = true,
+        includeTabName = true
+    } = pathOptions;
     // Group tabs by groupId (matching bookmark structure)
     const tabsByGroup = new Map();
     const ungroupedTabs = [];
@@ -631,15 +638,35 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
             const tabTime = new Date(tabTimestamp);
             const prefix = formatTimestamp(tabTime);
             
-            // Create path: windowFolder/groupFolder/tabFolder or windowFolder/groupFolder/tabFolder/domain
-            const tabFolderName = formatTabFolder(tab.title, tab.id);
-            let tabFolderPath = `${windowFolderPath}/${groupName}/${tabFolderName}`;
+            // Build path dynamically based on options
+            let pathComponents = [windowFolderPath];
             
-            // Add domain subfolder if enabled
-            if (useDomainSubfolder) {
-                const domain = new URL(tab.url).hostname;
-                tabFolderPath = `${tabFolderPath}/${domain}`;
+            // Add YYYYMMDD folder if enabled
+            if (includeYYYYMMDD) {
+                const year = tabTime.getFullYear();
+                const month = String(tabTime.getMonth() + 1).padStart(2, '0');
+                const day = String(tabTime.getDate()).padStart(2, '0');
+                pathComponents.push(`${year}${month}${day}`);
             }
+            
+            // Add group name if enabled
+            if (includeGroupName) {
+                pathComponents.push(groupName);
+            }
+            
+            // Add tab domain if enabled
+            if (includeTabDomain) {
+                const domain = new URL(tab.url).hostname;
+                pathComponents.push(domain);
+            }
+            
+            // Add tab name folder if enabled
+            if (includeTabName) {
+                const tabFolderName = formatTabFolder(tab.title, tab.id);
+                pathComponents.push(tabFolderName);
+            }
+            
+            const tabFolderPath = pathComponents.join('/');
             
             downloadPromises.push(
                 downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, groupName, divExtractionPairs)
@@ -648,21 +675,36 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
         }
     }
     
-    // Process ungrouped tabs with folder structure: windowFolder/tabFolder/file.html
+    // Process ungrouped tabs with folder structure
     for (const tab of ungroupedTabs) {
         const tabTimestamp = getTabTimestamp(tab.id, tab.url, timestamps, new Date());
         const tabTime = new Date(tabTimestamp);
         const prefix = formatTimestamp(tabTime);
         
-        // Create path: windowFolder/tabFolder or windowFolder/tabFolder/domain
-        const tabFolderName = formatTabFolder(tab.title, tab.id);
-        let tabFolderPath = `${windowFolderPath}/${tabFolderName}`;
+        // Build path dynamically based on options (skip group name for ungrouped)
+        let pathComponents = [windowFolderPath];
         
-        // Add domain subfolder if enabled
-        if (useDomainSubfolder) {
-            const domain = new URL(tab.url).hostname;
-            tabFolderPath = `${tabFolderPath}/${domain}`;
+        // Add YYYYMMDD folder if enabled
+        if (includeYYYYMMDD) {
+            const year = tabTime.getFullYear();
+            const month = String(tabTime.getMonth() + 1).padStart(2, '0');
+            const day = String(tabTime.getDate()).padStart(2, '0');
+            pathComponents.push(`${year}${month}${day}`);
         }
+        
+        // Add tab domain if enabled
+        if (includeTabDomain) {
+            const domain = new URL(tab.url).hostname;
+            pathComponents.push(domain);
+        }
+        
+        // Add tab name folder if enabled
+        if (includeTabName) {
+            const tabFolderName = formatTabFolder(tab.title, tab.id);
+            pathComponents.push(tabFolderName);
+        }
+        
+        const tabFolderPath = pathComponents.join('/');
         
         downloadPromises.push(
             downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, null, divExtractionPairs)

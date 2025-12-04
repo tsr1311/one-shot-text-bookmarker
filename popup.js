@@ -5,10 +5,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectorDiv = document.getElementById('selectorDiv');
     const excludeElementsDiv = document.getElementById('excludeElementsDiv');
     const divExtractionDiv = document.getElementById('divExtractionDiv');
-    const domainSubfolderDiv = document.getElementById('domainSubfolderDiv');
+    const downloadPathOptionsDiv = document.getElementById('downloadPathOptionsDiv');
     const folderStructureDiv = document.getElementById('folderStructureDiv');
     const useParentFoldersCheckbox = document.getElementById('useParentFoldersCheckbox');
-    const useDomainSubfolderCheckbox = document.getElementById('useDomainSubfolderCheckbox');
+    const includeYYYYMMDDCheckbox = document.getElementById('includeYYYYMMDDCheckbox');
+    const includeGroupNameCheckbox = document.getElementById('includeGroupNameCheckbox');
+    const includeTabDomainCheckbox = document.getElementById('includeTabDomainCheckbox');
+    const includeTabNameCheckbox = document.getElementById('includeTabNameCheckbox');
     const downloadPathInput = document.getElementById('downloadPathInput');
     const mainFolderTemplateInput = document.getElementById('mainFolderTemplateInput');
     const mainFolderPreview = document.getElementById('mainFolderPreview');
@@ -17,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const divExtractionInput = document.getElementById('divExtractionInput');
 
     try {
-        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements', 'bookmarkPathStructure', 'saveGroupsOnly', 'mainFolderTemplate', 'divExtractionPairs', 'useDomainSubfolder']);
+        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements', 'bookmarkPathStructure', 'saveGroupsOnly', 'mainFolderTemplate', 'divExtractionPairs', 'includeYYYYMMDD', 'includeGroupName', 'includeTabDomain', 'includeTabName']);
         
         // Handle auto-download checkbox
         checkbox.checked = result.autoDownloadEnabled === true;
@@ -25,12 +28,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             selectorDiv.style.display = 'block';
             excludeElementsDiv.style.display = 'block';
             divExtractionDiv.style.display = 'block';
-            domainSubfolderDiv.style.display = 'block';
+            downloadPathOptionsDiv.style.display = 'block';
             folderStructureDiv.style.display = 'block';
         }
 
-        // Handle use domain subfolder checkbox (default to false)
-        useDomainSubfolderCheckbox.checked = result.useDomainSubfolder === true;
+        // Handle path options checkboxes (all default to true for backward compatibility)
+        includeYYYYMMDDCheckbox.checked = result.includeYYYYMMDD !== false;
+        includeGroupNameCheckbox.checked = result.includeGroupName !== false;
+        includeTabDomainCheckbox.checked = result.includeTabDomain !== false;
+        includeTabNameCheckbox.checked = result.includeTabName !== false;
 
         // Handle download overview checkbox (default to true)
         downloadOverviewCheckbox.checked = result.downloadOverview !== false;
@@ -85,18 +91,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectorDiv.style.display = isChecked ? 'block' : 'none';
         excludeElementsDiv.style.display = isChecked ? 'block' : 'none';
         divExtractionDiv.style.display = isChecked ? 'block' : 'none';
-        domainSubfolderDiv.style.display = isChecked ? 'block' : 'none';
+        downloadPathOptionsDiv.style.display = isChecked ? 'block' : 'none';
         folderStructureDiv.style.display = isChecked ? 'block' : 'none';
     });
 
-    useDomainSubfolderCheckbox.addEventListener('change', async () => {
+    // Save path option checkboxes
+    const savePathOption = async (key, checkbox, indicatorId) => {
         try {
-            await chrome.storage.local.set({ useDomainSubfolder: useDomainSubfolderCheckbox.checked });
-            showSavedIndicator('domainSubfolderSavedIndicator');
+            await chrome.storage.local.set({ [key]: checkbox.checked });
+            showSavedIndicator(indicatorId);
         } catch (error) {
-            console.error('Failed to save domain subfolder setting:', error);
+            console.error(`Failed to save ${key}:`, error);
         }
-    });
+    };
+
+    includeYYYYMMDDCheckbox.addEventListener('change', () => 
+        savePathOption('includeYYYYMMDD', includeYYYYMMDDCheckbox, 'pathOptionsSavedIndicator'));
+    includeGroupNameCheckbox.addEventListener('change', () => 
+        savePathOption('includeGroupName', includeGroupNameCheckbox, 'pathOptionsSavedIndicator'));
+    includeTabDomainCheckbox.addEventListener('change', () => 
+        savePathOption('includeTabDomain', includeTabDomainCheckbox, 'pathOptionsSavedIndicator'));
+    includeTabNameCheckbox.addEventListener('change', () => 
+        savePathOption('includeTabName', includeTabNameCheckbox, 'pathOptionsSavedIndicator'));
 
 
     // Update main folder preview with resolved variables
@@ -329,7 +345,12 @@ async function saveWindows(windows, downloadPath) {
     const selector = document.getElementById('selectorInput').value;
     const excludeElements = document.getElementById('excludeElementsInput').value;
     const divExtractionPairs = document.getElementById('divExtractionInput').value;
-    const useDomainSubfolder = document.getElementById('useDomainSubfolderCheckbox').checked;
+    const pathOptions = {
+        includeYYYYMMDD: document.getElementById('includeYYYYMMDDCheckbox').checked,
+        includeGroupName: document.getElementById('includeGroupNameCheckbox').checked,
+        includeTabDomain: document.getElementById('includeTabDomainCheckbox').checked,
+        includeTabName: document.getElementById('includeTabNameCheckbox').checked
+    };
 
     // Load settings
     const settings = await chrome.storage.local.get(['bookmarkPathStructure', 'saveGroupsOnly', 'mainFolderTemplate']);
@@ -539,7 +560,7 @@ async function saveWindows(windows, downloadPath) {
                     // Flat structure: just use base path (or Downloads root if empty)
                     windowFolderPath = sanitizedPath || 'OneShot-Bookmarks';
                 }
-                await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap, divExtractionPairs, useDomainSubfolder);
+                await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap, divExtractionPairs, pathOptions);
             }
         }
 

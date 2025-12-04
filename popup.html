@@ -119,15 +119,30 @@
         </div>
     </div>
 
-    <div id="domainSubfolderDiv" style="display: none; margin-top: 10px; margin-left: 20px;">
-        <label style="display: flex; align-items: center; cursor: pointer;">
-            <input type="checkbox" id="useDomainSubfolderCheckbox" style="margin-right: 8px;">
-            <span style="font-size: 12px;">Organize by domain</span>
-        </label>
-        <div style="font-size: 11px; color: #666; margin-top: 5px;">
-            Creates domain subfolder: tabFolder/domain/files.html
+    <div id="downloadPathOptionsDiv" style="display: none; margin-top: 10px; margin-left: 20px;">
+        <label style="font-size: 12px; color: #333;">Download path components:</label>
+        <div style="margin-top: 8px; margin-left: 10px;">
+            <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 6px;">
+                <input type="checkbox" id="includeYYYYMMDDCheckbox" style="margin-right: 8px;">
+                <span style="font-size: 11px;">Include date folder (YYYYMMDD)</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 6px;">
+                <input type="checkbox" id="includeGroupNameCheckbox" style="margin-right: 8px;">
+                <span style="font-size: 11px;">Include group name folder</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 6px;">
+                <input type="checkbox" id="includeTabDomainCheckbox" style="margin-right: 8px;">
+                <span style="font-size: 11px;">Include tab domain folder</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 6px;">
+                <input type="checkbox" id="includeTabNameCheckbox" style="margin-right: 8px;">
+                <span style="font-size: 11px;">Include tab name folder</span>
+            </label>
         </div>
-        <div id="domainSubfolderSavedIndicator" class="settings-saved">✓ Saved</div>
+        <div style="font-size: 10px; color: #666; margin-top: 5px;">
+            Customize which folders appear in download path structure
+        </div>
+        <div id="pathOptionsSavedIndicator" class="settings-saved">✓ Saved</div>
     </div>
 
     <div style="margin-top: 15px;">
