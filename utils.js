@@ -485,19 +485,21 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                         let elementType = 'div'; // default
                         let jsonPath = null; // for JSON extraction from script tags
                         
-                        if (attributeSelector.includes(':')) {
-                            const parts = attributeSelector.split(':');
-                            if (parts[0].match(/^(meta|div|span|a|article|section|header|script)$/i)) {
-                                elementType = parts[0].toLowerCase();
-                                attributeSelector = parts.slice(1).join(':');
-                            }
-                        }
-                        
-                        // Check for JSON path extraction (e.g., "script[type="application/ld+json"]::title")
-                        if (elementType === 'script' && attributeSelector.includes('::')) {
+                        // Check for JSON path extraction FIRST (e.g., "script:type="application/ld+json"::title")
+                        if (attributeSelector.includes('::')) {
                             const pathSeparatorIndex = attributeSelector.indexOf('::');
                             jsonPath = attributeSelector.substring(pathSeparatorIndex + 2).trim();
                             attributeSelector = attributeSelector.substring(0, pathSeparatorIndex).trim();
+                        }
+                        
+                        // Now parse element type
+                        if (attributeSelector.includes(':')) {
+                            const firstColonIndex = attributeSelector.indexOf(':');
+                            const potentialElementType = attributeSelector.substring(0, firstColonIndex);
+                            if (potentialElementType.match(/^(meta|div|span|a|article|section|header|script)$/i)) {
+                                elementType = potentialElementType.toLowerCase();
+                                attributeSelector = attributeSelector.substring(firstColonIndex + 1);
+                            }
                         }
                         
                         // Find all elements of specified type that match the attribute selector
