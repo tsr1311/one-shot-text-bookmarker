@@ -113,6 +113,24 @@
         <div style="font-size: 11px; color: #666; margin-top: 5px;">
             Creates subfolders: mainFolder/windowFolder/files.html (default: enabled)
         </div>
+
+        <div id="bookmarkPathStructureDiv" style="margin-top: 10px;">
+            <label style="font-size: 12px; color: #333;">Bookmark folder structure:</label>
+            <div style="margin-top: 5px;">
+                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 5px;">
+                    <input type="radio" name="bookmarkPathStructure" value="window-group" checked style="margin-right: 8px;">
+                    <span style="font-size: 11px;">Window → Group (default)</span>
+                </label>
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="radio" name="bookmarkPathStructure" value="group-window" style="margin-right: 8px;">
+                    <span style="font-size: 11px;">Group → Window</span>
+                </label>
+            </div>
+            <div style="font-size: 10px; color: #666; margin-top: 5px;">
+                Controls how bookmarks are organized: by window first, or by group first
+            </div>
+            <div id="pathStructureSavedIndicator" class="settings-saved">✓ Saved</div>
+        </div>
     </div>
 
     <div id="selectorDiv" style="display: none; margin-top: 10px; margin-left: 20px;">

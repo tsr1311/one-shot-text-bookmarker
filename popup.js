@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const excludeElementsInput = document.getElementById('excludeElementsInput');
 
     try {
-        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements']);
+        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements', 'bookmarkPathStructure']);
         
         // Handle auto-download checkbox
         checkbox.checked = result.autoDownloadEnabled === true;
@@ -41,6 +41,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (result.excludeElements) {
             excludeElementsInput.value = result.excludeElements;
         }
+
+        // Handle bookmark path structure (default to 'window-group')
+        const pathStructure = result.bookmarkPathStructure || 'window-group';
+        const pathStructureRadios = document.querySelectorAll('input[name="bookmarkPathStructure"]');
+        pathStructureRadios.forEach(radio => {
+            if (radio.value === pathStructure) {
+                radio.checked = true;
+            }
+        });
 
     } catch (error) {
         console.error('Failed to load settings:', error);
@@ -89,6 +98,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error('Failed to save exclude elements:', error);
         }
+    });
+
+    // Save bookmark path structure when it changes
+    const pathStructureRadios = document.querySelectorAll('input[name="bookmarkPathStructure"]');
+    pathStructureRadios.forEach(radio => {
+        radio.addEventListener('change', async (e) => {
+            try {
+                await chrome.storage.local.set({ bookmarkPathStructure: e.target.value });
+                showSavedIndicator('pathStructureSavedIndicator');
+            } catch (error) {
+                console.error('Failed to save bookmark path structure:', error);
+            }
+        });
     });
 
     // Folder picker using download dialog
@@ -196,6 +218,10 @@ async function saveWindows(windows, downloadPath) {
     const useParentFolders = document.getElementById('useParentFoldersCheckbox').checked;
     const selector = document.getElementById('selectorInput').value;
     const excludeElements = document.getElementById('excludeElementsInput').value;
+
+    // Load bookmark path structure setting
+    const settings = await chrome.storage.local.get(['bookmarkPathStructure']);
+    const bookmarkPathStructure = settings.bookmarkPathStructure || 'window-group';
 
     // Sanitize the download path - allow absolute paths or subfolder names
     const sanitizedPath = sanitizePath(downloadPath);

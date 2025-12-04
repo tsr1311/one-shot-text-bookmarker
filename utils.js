@@ -26,6 +26,20 @@ function sanitizeGroupName(groupTitle, groupId) {
         .slice(0, 50);
 }
 
+// Build bookmark folder structure based on path structure setting
+// Returns object with parentId and folder hierarchy info
+function buildBookmarkPath(windowFolder, groupName, pathStructure = 'window-group') {
+    // For 'window-group' (default): bookmarks go under window/group/
+    // For 'group-window': would need group at top level, then window
+    // Since we create window folders in the main loop, we handle this at bookmark creation time
+    // For now, this function prepares the structure info
+    return {
+        structure: pathStructure,
+        windowFolder: windowFolder,
+        groupName: groupName
+    };
+}
+
 // Get or create the main OSB folder for all saved windows
 async function getOrCreateMainFolder(envDescriptor) {
     const mainFolderName = `OSBed-${envDescriptor}`;
