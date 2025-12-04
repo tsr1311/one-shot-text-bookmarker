@@ -83,12 +83,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (items && items[0]) {
                                 const fullPath = items[0].filename;
                                 // Extract folder path (remove the filename)
+                                // This will be relative to Downloads folder
                                 const folderPath = fullPath.substring(0, fullPath.lastIndexOf('/'));
-                                downloadPathInput.value = folderPath;
                                 
-                                // Save the path
-                                chrome.storage.local.set({ downloadPath: folderPath });
-                                showSavedIndicator('pathSavedIndicator');
+                                // Store the relative path (will be relative to Downloads)
+                                if (folderPath) {
+                                    downloadPathInput.value = folderPath;
+                                    chrome.storage.local.set({ downloadPath: folderPath });
+                                    showSavedIndicator('pathSavedIndicator');
+                                }
                                 
                                 // Clean up: remove the dummy file
                                 chrome.downloads.removeFile(downloadId);

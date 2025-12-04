@@ -1,21 +1,18 @@
 const MAX_TITLE_LENGTH = 24;
 
-// Sanitize download path - handles both subfolder names and absolute paths
+// Sanitize download path - handles subfolder names relative to Downloads
 function sanitizePath(path) {
     if (!path) return '';
     
     const trimmedPath = path.trim();
     
-    // Check if it's an absolute path (starts with / on Unix or drive letter on Windows)
-    const isAbsolute = trimmedPath.startsWith('/') || /^[A-Za-z]:[/\\]/.test(trimmedPath);
-    
-    if (isAbsolute) {
-        // For absolute paths, only remove dangerous characters but keep path separators
-        return trimmedPath.replace(/[<>:"|?*]/g, '').replace(/\\.\\./g, '');
-    } else {
-        // For relative paths (subfolder names), remove all path separators
-        return trimmedPath.replace(/\\.\\./g, '').replace(/[<>:"/\\|?*]/g, '');
-    }
+    // Remove parent directory traversal and dangerous characters
+    // Keep forward slashes for nested subfolders
+    return trimmedPath
+        .replace(/\.\.\.\./g, '')  // Remove ..
+        .replace(/[<>:"|?*]/g, '')   // Remove invalid chars (keep forward slashes)
+        .replace(/\\\\/g, '/')        // Convert backslashes to forward slashes
+        .replace(/^\/+/, '');        // Remove leading slashes (must be relative)
 }
 
 // Get or create the main OSB folder for all saved windows
