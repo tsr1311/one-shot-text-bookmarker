@@ -1,5 +1,23 @@
 const MAX_TITLE_LENGTH = 24;
 
+// Sanitize download path - handles both subfolder names and absolute paths
+function sanitizePath(path) {
+    if (!path) return '';
+    
+    const trimmedPath = path.trim();
+    
+    // Check if it's an absolute path (starts with / on Unix or drive letter on Windows)
+    const isAbsolute = trimmedPath.startsWith('/') || /^[A-Za-z]:[/\\]/.test(trimmedPath);
+    
+    if (isAbsolute) {
+        // For absolute paths, only remove dangerous characters but keep path separators
+        return trimmedPath.replace(/[<>:"|?*]/g, '').replace(/\\.\\./g, '');
+    } else {
+        // For relative paths (subfolder names), remove all path separators
+        return trimmedPath.replace(/\\.\\./g, '').replace(/[<>:"/\\|?*]/g, '');
+    }
+}
+
 // Get or create the main OSB folder for all saved windows
 async function getOrCreateMainFolder(envDescriptor) {
     const mainFolderName = `OSBed-${envDescriptor}`;

@@ -3,9 +3,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const checkbox = document.getElementById('autoDownloadCheckbox');
     const selectorDiv = document.getElementById('selectorDiv');
     const downloadPathInput = document.getElementById('downloadPathInput');
+    const selectorInput = document.getElementById('selectorInput');
 
     try {
-        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadPath']);
+        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadPath', 'cssSelector']);
         
         // Handle auto-download checkbox
         checkbox.checked = result.autoDownloadEnabled === true;
@@ -18,6 +19,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             downloadPathInput.value = result.downloadPath;
         }
 
+        // Handle CSS selector input
+        if (result.cssSelector) {
+            selectorInput.value = result.cssSelector;
+        }
+
     } catch (error) {
         console.error('Failed to load settings:', error);
     }
@@ -26,11 +32,86 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectorDiv.style.display = checkbox.checked ? 'block' : 'none';
     });
 
+    // Show visual feedback when settings are saved
+    function showSavedIndicator(indicatorId) {
+        const indicator = document.getElementById(indicatorId);
+        indicator.classList.add('show');
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 2000);
+    }
+
     downloadPathInput.addEventListener('change', async (e) => {
         try {
             await chrome.storage.local.set({ downloadPath: e.target.value });
+            showSavedIndicator('pathSavedIndicator');
         } catch (error) {
             console.error('Failed to save download path:', error);
+        }
+    });
+
+    // Save CSS selector when it changes
+    selectorInput.addEventListener('change', async (e) => {
+        try {
+            await chrome.storage.local.set({ cssSelector: e.target.value });
+            showSavedIndicator('selectorSavedIndicator');
+        } catch (error) {
+            console.error('Failed to save CSS selector:', error);
+        }
+    });
+
+    // Folder picker using download dialog
+    document.getElementById('browseFolderButton').addEventListener('click', async () => {
+        try {
+            // Create a dummy file to trigger the save dialog
+            const blob = new Blob([''], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            // Use download API with saveAs to let user choose location
+            const downloadId = await chrome.downloads.download({
+                url: url,
+                filename: 'one-shot-bookmarker-location.txt',
+                saveAs: true
+            });
+
+            // Listen for the download to complete or be cancelled
+            const listener = (delta) => {
+                if (delta.id === downloadId) {
+                    if (delta.state && delta.state.current === 'complete') {
+                        // Get the download item to extract the path
+                        chrome.downloads.search({ id: downloadId }, (items) => {
+                            if (items && items[0]) {
+                                const fullPath = items[0].filename;
+                                // Extract folder path (remove the filename)
+                                const folderPath = fullPath.substring(0, fullPath.lastIndexOf('/'));
+                                downloadPathInput.value = folderPath;
+                                
+                                // Save the path
+                                chrome.storage.local.set({ downloadPath: folderPath });
+                                showSavedIndicator('pathSavedIndicator');
+                                
+                                // Clean up: remove the dummy file
+                                chrome.downloads.removeFile(downloadId);
+                                chrome.downloads.erase({ id: downloadId });
+                            }
+                        });
+                        chrome.downloads.onChanged.removeListener(listener);
+                    } else if (delta.state && delta.state.current === 'interrupted') {
+                        // User cancelled
+                        chrome.downloads.erase({ id: downloadId });
+                        chrome.downloads.onChanged.removeListener(listener);
+                    }
+                }
+            };
+            
+            chrome.downloads.onChanged.addListener(listener);
+            
+            // Clean up the blob URL
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            
+        } catch (error) {
+            console.error('Failed to open folder picker:', error);
+            alert('Failed to open folder picker. You can manually enter a folder path.');
         }
     });
 });
@@ -61,8 +142,8 @@ async function saveWindows(windows, downloadPath) {
     const autoDownloadEnabled = document.getElementById('autoDownloadCheckbox').checked;
     const selector = document.getElementById('selectorInput').value;
 
-    // Sanitize the download path
-    const sanitizedPath = downloadPath.replace(/\\.\\./g, '').replace(/[<>:"/\\|?*]/g, '').trim();
+    // Sanitize the download path - allow absolute paths or subfolder names
+    const sanitizedPath = sanitizePath(downloadPath);
     
     statusDiv.textContent = autoDownloadEnabled ? 'Saving bookmarks and downloading content...' : 'Saving...';
 
