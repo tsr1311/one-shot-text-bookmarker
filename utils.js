@@ -246,7 +246,7 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector) {
         const safeTitle = (tab.title || 'untitled')
             .replace(/[/\\:*?"<>|`]/g, '_')
             .trim()
-            .slice(0, 50); // Limit filename length
+            .slice(0, 60); // Limit filename length
         
         // Skip non-http(s) URLs that can't be accessed
         if (!tab.url || (!tab.url.startsWith('http://') && !tab.url.startsWith('https://'))) {
