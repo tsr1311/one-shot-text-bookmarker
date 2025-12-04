@@ -131,13 +131,13 @@
 
 ### Implementation for User Story 5
 
-- [ ] T039 [P] [US5] Add "Save Groups Only" checkbox to popup.html (with label and saved indicator)
-- [ ] T040 [P] [US5] Add CSS styles for Save Groups checkbox in popup.html
-- [ ] T041 [US5] Add saveGroupsOnly setting loader to popup.js DOMContentLoaded (load from chrome.storage.local)
-- [ ] T042 [US5] Add saveGroupsOnly setting saver to popup.js (save on checkbox change, show ✓ Saved indicator)
-- [ ] T043 [US5] Load saveGroupsOnly setting in bookmark save function in utils.js or popup.js
-- [ ] T044 [US5] Apply filter to tabs array in utils.js (tabs.filter(tab => tab.groupId !== -1) when enabled)
-- [ ] T045 [US5] Add warning message when no grouped tabs found and filter enabled in utils.js
+- [x] T039 [P] [US5] Add "Save Groups Only" checkbox to popup.html (with label and saved indicator)
+- [x] T040 [P] [US5] Add CSS styles for Save Groups checkbox in popup.html
+- [x] T041 [US5] Add saveGroupsOnly setting loader to popup.js DOMContentLoaded (load from chrome.storage.local)
+- [x] T042 [US5] Add saveGroupsOnly setting saver to popup.js (save on checkbox change, show ✓ Saved indicator)
+- [x] T043 [US5] Load saveGroupsOnly setting in bookmark save function in utils.js or popup.js
+- [x] T044 [US5] Apply filter to tabs array in utils.js (tabs.filter(tab => tab.groupId !== -1) when enabled)
+- [x] T045 [US5] Add warning message when no grouped tabs found and filter enabled in utils.js
 - [ ] T046 [US5] Test filter includes only grouped tabs when enabled (manual testing)
 - [ ] T047 [US5] Test all tabs saved when filter disabled (manual testing)
 - [ ] T048 [US5] Test behavior with no grouped tabs and filter enabled (manual testing)

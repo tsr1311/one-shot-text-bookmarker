@@ -7,11 +7,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const folderStructureDiv = document.getElementById('folderStructureDiv');
     const useParentFoldersCheckbox = document.getElementById('useParentFoldersCheckbox');
     const downloadPathInput = document.getElementById('downloadPathInput');
+    const mainFolderTemplateInput = document.getElementById('mainFolderTemplateInput');
+    const mainFolderPreview = document.getElementById('mainFolderPreview');
     const selectorInput = document.getElementById('selectorInput');
     const excludeElementsInput = document.getElementById('excludeElementsInput');
 
     try {
-        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements', 'bookmarkPathStructure', 'saveGroupsOnly']);
+        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadOverview', 'downloadPath', 'cssSelector', 'useParentFolders', 'excludeElements', 'bookmarkPathStructure', 'saveGroupsOnly', 'mainFolderTemplate']);
         
         // Handle auto-download checkbox
         checkbox.checked = result.autoDownloadEnabled === true;
@@ -27,6 +29,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Handle use parent folders checkbox (default to true)
         useParentFoldersCheckbox.checked = result.useParentFolders !== false;
 
+        // Handle main folder template input (default: {OS-environment}/{YYYYMMDD}/)
+        const mainTemplate = result.mainFolderTemplate || '{OS-environment}/{YYYYMMDD}/';
+        mainFolderTemplateInput.value = mainTemplate;
+        updateMainFolderPreview(mainTemplate, mainFolderPreview);
+        
         // Handle download path input
         if (result.downloadPath) {
             downloadPathInput.value = result.downloadPath;
@@ -66,6 +73,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         folderStructureDiv.style.display = isChecked ? 'block' : 'none';
     });
 
+
+    // Update main folder preview with resolved variables
+    function updateMainFolderPreview(template, previewElement) {
+        if (!template) {
+            previewElement.textContent = 'Preview: OSBed-Mac/20241204/';
+            return;
+        }
+        
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        // Get OS environment descriptor
+        const platform = navigator.platform || 'Unknown';
+        const envDescriptor = platform.includes('Mac') ? 'Mac' :
+                              platform.includes('Win') ? 'Win' :
+                              platform.includes('Linux') ? 'Linux' : 'Unknown';
+        
+        // Replace variables with sample values
+        let preview = template
+            .replace(/\{YYYYMMDD\}/g, `${year}${month}${day}`)
+            .replace(/\{HHMM\}/g, `${hours}${minutes}`)
+            .replace(/\{OS-environment\}/g, `OSBed-${envDescriptor}`)
+            .replace(/\{Window-Name\}/g, '[Window Name]')
+            .replace(/\{Group-Name\}/g, '[Group Name]');
+        
+        // Add trailing slash if not present
+        if (!preview.endsWith('/')) {
+            preview += '/';
+        }
+        
+        previewElement.textContent = `Preview: ${preview}`;
+    }
+
     // Show visual feedback when settings are saved
     function showSavedIndicator(indicatorId) {
         const indicator = document.getElementById(indicatorId);
@@ -81,6 +125,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             showSavedIndicator('pathSavedIndicator');
         } catch (error) {
             console.error('Failed to save download path:', error);
+        }
+    });
+
+    // Save and preview main folder template when it changes
+    mainFolderTemplateInput.addEventListener('change', async (e) => {
+        try {
+            const template = e.target.value || '{OS-environment}/{YYYYMMDD}/';
+            await chrome.storage.local.set({ mainFolderTemplate: template });
+            updateMainFolderPreview(template, mainFolderPreview);
+            showSavedIndicator('mainTemplateSavedIndicator');
+        } catch (error) {
+            console.error('Failed to save main folder template:', error);
         }
     });
 
@@ -239,9 +295,10 @@ async function saveWindows(windows, downloadPath) {
     const excludeElements = document.getElementById('excludeElementsInput').value;
 
     // Load settings
-    const settings = await chrome.storage.local.get(['bookmarkPathStructure', 'saveGroupsOnly']);
+    const settings = await chrome.storage.local.get(['bookmarkPathStructure', 'saveGroupsOnly', 'mainFolderTemplate']);
     const bookmarkPathStructure = settings.bookmarkPathStructure || 'window-group';
     const saveGroupsOnly = settings.saveGroupsOnly === true;
+    const mainFolderTemplate = settings.mainFolderTemplate || '{OS-environment}/{YYYYMMDD}/';
 
     // Sanitize the download path - allow absolute paths or subfolder names
     const sanitizedPath = sanitizePath(downloadPath);
@@ -292,10 +349,27 @@ async function saveWindows(windows, downloadPath) {
             }
         }
 
-        // Create main folder with window and tab counts
+        // Create main folder using template
         const today = new Date();
+        
+        // Resolve main folder template (for now, use first window name and first group name as samples)
+        const firstWindowName = windows[0]?.title || '';
+        const firstGroupName = groupsMap.size > 0 ? Array.from(groupsMap.values())[0]?.title || '' : '';
+        const mainFolderPath = resolveMainFolderTemplate(mainFolderTemplate, today, firstWindowName, firstGroupName, envDescriptor);
+        
+        // Create bookmark folder structure from resolved path
+        let currentParentId = null;
+        const pathParts = mainFolderPath.split('/').filter(p => p);
+        
+        for (const part of pathParts) {
+            const folder = await createBookmarkFolder(part, currentParentId, currentParentId === null ? envDescriptor : null);
+            currentParentId = folder.id;
+        }
+        
+        const mainFolder = { id: currentParentId };
+        
+        // For backward compatibility, also create the old-style folder name for overview file naming
         const mainFolderName = formatMainFolderName(today, windows.length, totalTabs);
-        const mainFolder = await createBookmarkFolder(mainFolderName, null, envDescriptor);
 
         // Generate and save overview HTML if enabled
         if (downloadOverviewEnabled) {
@@ -303,9 +377,10 @@ async function saveWindows(windows, downloadPath) {
             const blob = new Blob([overviewHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
 
+            // Use the resolved main folder path for downloads as well
             const overviewFilename = sanitizedPath 
-                ? `${sanitizedPath}/${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`
-                : `${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`;
+                ? `${sanitizedPath}/${mainFolderPath}/${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`
+                : `${mainFolderPath}/${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`;
 
             await chrome.downloads.download({
                 url: url,
@@ -338,9 +413,9 @@ async function saveWindows(windows, downloadPath) {
             const windowNumber = windowIndex + 1; // Convert 0-based index to 1-based window number
             // Use window title if available (custom window name), otherwise use first tab title
             const windowName = window.title || '';
-            const windowFolderName = formatWindowFolder(oldestTabTime, window.tabs.length, firstTabTitle, windowNumber, windowName);
+            const windowFolderName = formatWindowFolder(oldestTabTime, window.tabs.length, firstTabTitle, windowNumber, windowName, window.id);
 
-            // Create folder for this window under today's folder
+            // Create folder for this window under main folder
             const windowFolder = await createBookmarkFolder(windowFolderName, mainFolder.id);
 
             // Group tabs by groupId
@@ -379,28 +454,38 @@ async function saveWindows(windows, downloadPath) {
                 // Create group folder under window folder
                 const groupFolder = await createBookmarkFolder(groupName, windowFolder.id);
                 
-                // Save tabs in this group
+                // Save tabs in this group with tab-level folders
                 for (const tab of groupTabs) {
                     const tabTimestamp = getTabTimestamp(tab.id, tab.url, timestamps, today);
                     const tabCreationTime = new Date(tabTimestamp);
                     const prefix = formatTimestamp(tabCreationTime);
                     
+                    // Create tab folder under group folder
+                    const tabFolderName = formatTabFolder(tab.title, tab.id);
+                    const tabFolder = await createBookmarkFolder(tabFolderName, groupFolder.id);
+                    
+                    // Create bookmark in tab folder
                     await chrome.bookmarks.create({
-                        parentId: groupFolder.id,
+                        parentId: tabFolder.id,
                         title: `${prefix} ${tab.title}`,
                         url: tab.url
                     });
                 }
             }
 
-            // Save ungrouped tabs directly under window folder
+            // Save ungrouped tabs with tab-level folders under window folder
             for (const tab of ungroupedTabs) {
                 const tabTimestamp = getTabTimestamp(tab.id, tab.url, timestamps, today);
                 const tabCreationTime = new Date(tabTimestamp);
                 const prefix = formatTimestamp(tabCreationTime);
 
+                // Create tab folder under window folder
+                const tabFolderName = formatTabFolder(tab.title, tab.id);
+                const tabFolder = await createBookmarkFolder(tabFolderName, windowFolder.id);
+                
+                // Create bookmark in tab folder
                 await chrome.bookmarks.create({
-                    parentId: windowFolder.id,
+                    parentId: tabFolder.id,
                     title: `${prefix} ${tab.title}`,
                     url: tab.url
                 });
@@ -410,8 +495,8 @@ async function saveWindows(windows, downloadPath) {
             if (autoDownloadEnabled) {
                 let windowFolderPath;
                 if (useParentFolders) {
-                    // Use parent folder structure: basePath/mainFolder/windowFolder
-                    const baseFolderPath = sanitizedPath ? `${sanitizedPath}/${mainFolderName}` : mainFolderName;
+                    // Use parent folder structure matching bookmarks: basePath/mainFolderPath/windowFolder
+                    const baseFolderPath = sanitizedPath ? `${sanitizedPath}/${mainFolderPath}` : mainFolderPath;
                     windowFolderPath = `${baseFolderPath}/${windowFolderName}`;
                 } else {
                     // Flat structure: just use base path (or Downloads root if empty)

@@ -26,6 +26,39 @@ function sanitizeGroupName(groupTitle, groupId) {
         .slice(0, 50);
 }
 
+// Resolve main folder path template with variables
+// Variables: {YYYYMMDD}, {HHMM}, {OS-environment}, {Window-Name}, {Group-Name}, or custom text
+function resolveMainFolderTemplate(template, date = new Date(), windowName = '', groupName = '', envDescriptor = '') {
+    if (!template) {
+        // Default template
+        template = '{OS-environment}/{YYYYMMDD}/';
+    }
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    // Resolve variables
+    let resolved = template
+        .replace(/\{YYYYMMDD\}/g, `${year}${month}${day}`)
+        .replace(/\{HHMM\}/g, `${hours}${minutes}`)
+        .replace(/\{OS-environment\}/g, envDescriptor || 'OSBed-Unknown')
+        .replace(/\{Window-Name\}/g, windowName || 'Window')
+        .replace(/\{Group-Name\}/g, groupName || 'NoGroup');
+    
+    // Sanitize the resolved path
+    resolved = resolved
+        .replace(/[<>:"|?*]/g, '_')
+        .replace(/\\/g, '/')
+        .replace(/\/+/g, '/')  // Replace multiple slashes with single
+        .replace(/^\/+/, '')   // Remove leading slashes
+        .replace(/\/+$/, '');  // Remove trailing slashes
+    
+    return resolved;
+}
+
 // Build bookmark folder structure based on path structure setting
 // Returns object with parentId and folder hierarchy info
 function buildBookmarkPath(windowFolder, groupName, pathStructure = 'window-group') {
@@ -67,19 +100,41 @@ function formatMainFolderName(date, windowCount, totalTabs) {
 }
 
 // Format window folder name with date, tab count, first tab title, and window number
-function formatWindowFolder(date, tabCount, firstTabTitle = '', windowNumber = 1, windowName = '') {
+function formatWindowFolder(date, tabCount, firstTabTitle = '', windowNumber = 1, windowName = '', windowId = null) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
 
-    // Use window name if available, otherwise use first tab title
-    const displayName = windowName || firstTabTitle || '';
+    // Priority: window name > first tab title > win-{id}
+    let displayName = '';
+    if (windowName) {
+        displayName = windowName;
+    } else if (firstTabTitle) {
+        displayName = firstTabTitle;
+    } else if (windowId !== null) {
+        displayName = `win-${windowId}`;
+    } else {
+        displayName = `Window ${windowNumber}`;
+    }
+    
     const sanitizedTitle = displayName
         .replace(/[/\\:*?"<>|`]/g, '_')
         .trim()
         .slice(0, MAX_TITLE_LENGTH);
 
     return `${year}${month}${day}___(${tabCount})tab_win${windowNumber}___${sanitizedTitle}`;
+}
+
+// Format tab folder name based on tab title
+function formatTabFolder(tabTitle, tabId) {
+    if (!tabTitle || tabTitle.trim() === '') {
+        return `tab-${tabId}`;
+    }
+    
+    return tabTitle
+        .replace(/[/\\:*?"<>|`]/g, '_')
+        .trim()
+        .slice(0, MAX_TITLE_LENGTH);
 }
 
 // Format timestamp for tab names
@@ -473,27 +528,61 @@ ${pageData.html}`;
     }
 }
 
-// Download all tabs content in a window
+// Download all tabs content in a window with group and tab folder structure
 async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap = null) {
-    const downloadPromises = window.tabs.map(async (tab, tabIndex) => {
-        try {
-            // Get tab timestamp for filename prefix
+    // Group tabs by groupId (matching bookmark structure)
+    const tabsByGroup = new Map();
+    const ungroupedTabs = [];
+    
+    for (const tab of window.tabs) {
+        if (tab.groupId !== undefined && tab.groupId !== -1) {
+            if (!tabsByGroup.has(tab.groupId)) {
+                tabsByGroup.set(tab.groupId, []);
+            }
+            tabsByGroup.get(tab.groupId).push(tab);
+        } else {
+            ungroupedTabs.push(tab);
+        }
+    }
+    
+    const downloadPromises = [];
+    
+    // Process grouped tabs with folder structure: windowFolder/groupFolder/tabFolder/file.html
+    for (const [groupId, groupTabs] of tabsByGroup) {
+        const group = groupsMap?.get(groupId);
+        const groupName = group?.title ? sanitizeGroupName(group.title, groupId) : `Group-${groupId}`;
+        
+        for (const tab of groupTabs) {
             const tabTimestamp = getTabTimestamp(tab.id, tab.url, timestamps, new Date());
             const tabTime = new Date(tabTimestamp);
             const prefix = formatTimestamp(tabTime);
             
-            // Get group name for this tab if available
-            let groupName = null;
-            if (groupsMap && tab.groupId !== undefined && tab.groupId !== -1) {
-                const group = groupsMap.get(tab.groupId);
-                groupName = group?.title || `Group-${tab.groupId}`;
-            }
+            // Create path: windowFolder/groupFolder/tabFolder
+            const tabFolderName = formatTabFolder(tab.title, tab.id);
+            const tabFolderPath = `${windowFolderPath}/${groupName}/${tabFolderName}`;
             
-            await downloadTabContent(tab, windowFolderPath, prefix, selector, excludeElements, groupName);
-        } catch (error) {
-            console.error(`Error downloading tab ${tabIndex + 1} in window ${windowIndex + 1}:`, error);
+            downloadPromises.push(
+                downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, groupName)
+                    .catch(error => console.error(`Error downloading grouped tab ${tab.title}:`, error))
+            );
         }
-    });
+    }
+    
+    // Process ungrouped tabs with folder structure: windowFolder/tabFolder/file.html
+    for (const tab of ungroupedTabs) {
+        const tabTimestamp = getTabTimestamp(tab.id, tab.url, timestamps, new Date());
+        const tabTime = new Date(tabTimestamp);
+        const prefix = formatTimestamp(tabTime);
+        
+        // Create path: windowFolder/tabFolder
+        const tabFolderName = formatTabFolder(tab.title, tab.id);
+        const tabFolderPath = `${windowFolderPath}/${tabFolderName}`;
+        
+        downloadPromises.push(
+            downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, null)
+                .catch(error => console.error(`Error downloading ungrouped tab ${tab.title}:`, error))
+        );
+    }
 
     // Process downloads with some delay to avoid overwhelming the browser
     for (let i = 0; i < downloadPromises.length; i += 3) {

@@ -74,6 +74,20 @@
     </div>
 
     <div style="margin-top: 15px;">
+        <label for="mainFolderTemplateInput" style="font-size: 12px; color: #333;">Main Folder Template:</label>
+        <div class="input-group">
+            <input type="text" id="mainFolderTemplateInput" placeholder="Default: {OS-environment}/{YYYYMMDD}/" style="padding: 4px;">
+        </div>
+        <div style="font-size: 11px; color: #666; margin-top: 5px;">
+            Variables: {YYYYMMDD}, {HHMM}, {OS-environment}, {Window-Name}, {Group-Name}, or custom text
+        </div>
+        <div id="mainFolderPreview" style="font-size: 10px; color: #999; margin-top: 5px; font-style: italic;">
+            Preview: OSBed-Mac/20241204/
+        </div>
+        <div id="mainTemplateSavedIndicator" class="settings-saved">✓ Saved</div>
+    </div>
+    
+    <div style="margin-top: 15px;">
         <label for="downloadPathInput" style="font-size: 12px; color: #333;">Download Folder:</label>
         <div class="input-group">
             <input type="text" id="downloadPathInput" placeholder="e.g., Bookmarks or Work/Projects" style="padding: 4px;">
