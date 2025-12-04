@@ -1,20 +1,37 @@
-// Load saved checkbox state when popup opens
+// Load saved settings when popup opens
 document.addEventListener('DOMContentLoaded', async () => {
     const checkbox = document.getElementById('autoDownloadCheckbox');
     const selectorDiv = document.getElementById('selectorDiv');
+    const downloadPathInput = document.getElementById('downloadPathInput');
 
     try {
-        const result = await chrome.storage.local.get(['autoDownloadEnabled']);
+        const result = await chrome.storage.local.get(['autoDownloadEnabled', 'downloadPath']);
+        
+        // Handle auto-download checkbox
         checkbox.checked = result.autoDownloadEnabled === true;
         if (checkbox.checked) {
             selectorDiv.style.display = 'block';
         }
+
+        // Handle download path input
+        if (result.downloadPath) {
+            downloadPathInput.value = result.downloadPath;
+        }
+
     } catch (error) {
-        console.error('Failed to load auto-download setting:', error);
+        console.error('Failed to load settings:', error);
     }
 
     checkbox.addEventListener('change', () => {
         selectorDiv.style.display = checkbox.checked ? 'block' : 'none';
+    });
+
+    downloadPathInput.addEventListener('change', async (e) => {
+        try {
+            await chrome.storage.local.set({ downloadPath: e.target.value });
+        } catch (error) {
+            console.error('Failed to save download path:', error);
+        }
     });
 });
 
@@ -29,18 +46,23 @@ document.getElementById('autoDownloadCheckbox').addEventListener('change', async
 
 document.getElementById('saveButton').addEventListener('click', async () => {
     const allWindows = await chrome.windows.getAll({ populate: true });
-    await saveWindows(allWindows);
+    const downloadPath = document.getElementById('downloadPathInput').value;
+    await saveWindows(allWindows, downloadPath);
 });
 
 document.getElementById('saveCurrentWindowButton').addEventListener('click', async () => {
     const currentWindow = await chrome.windows.getCurrent({ populate: true });
-    await saveWindows([currentWindow]);
+    const downloadPath = document.getElementById('downloadPathInput').value;
+    await saveWindows([currentWindow], downloadPath);
 });
 
-async function saveWindows(windows) {
+async function saveWindows(windows, downloadPath) {
     const statusDiv = document.getElementById('status');
     const autoDownloadEnabled = document.getElementById('autoDownloadCheckbox').checked;
     const selector = document.getElementById('selectorInput').value;
+
+    // Sanitize the download path
+    const sanitizedPath = downloadPath.replace(/\\.\\./g, '').replace(/[<>:"/\\|?*]/g, '').trim();
     
     statusDiv.textContent = autoDownloadEnabled ? 'Saving bookmarks and downloading content...' : 'Saving...';
 
@@ -66,9 +88,14 @@ async function saveWindows(windows) {
         const overviewHtml = generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor);
         const blob = new Blob([overviewHtml], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
+
+        const overviewFilename = sanitizedPath 
+            ? `${sanitizedPath}/${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`
+            : `${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`;
+
         await chrome.downloads.download({
             url: url,
-            filename: `${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`,
+            filename: overviewFilename,
             saveAs: false
         });
 
@@ -118,7 +145,8 @@ async function saveWindows(windows) {
 
             // Download tab contents if auto-download is enabled
             if (autoDownloadEnabled) {
-                const windowFolderPath = `${mainFolderName}/${windowFolderName}`;
+                const baseFolderPath = sanitizedPath ? `${sanitizedPath}/${mainFolderName}` : mainFolderName;
+                const windowFolderPath = `${baseFolderPath}/${windowFolderName}`;
                 await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector);
             }
         }
