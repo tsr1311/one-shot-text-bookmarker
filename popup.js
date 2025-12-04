@@ -260,7 +260,7 @@ async function saveWindows(windows, downloadPath) {
 
         // Generate and save overview HTML if enabled
         if (downloadOverviewEnabled) {
-            const overviewHtml = generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor);
+            const overviewHtml = generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor, groupsMap);
             const blob = new Blob([overviewHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
 

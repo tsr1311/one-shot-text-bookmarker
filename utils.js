@@ -94,7 +94,7 @@ function formatTimestamp(date) {
 }
 
 // Generate HTML overview of all windows and tabs
-function generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor) {
+function generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor, groupsMap = null) {
     const today = new Date();
 
 
@@ -102,11 +102,15 @@ function generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor
         <style>
             body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
             .container { max-width: 1200px; margin: 0 auto; }
-            h1, h2 { color: #333; }
+            h1, h2, h3 { color: #333; }
+            h3 { margin-top: 20px; margin-bottom: 10px; padding: 8px 12px; background: #e8f0fe; border-left: 4px solid #1a73e8; }
+            .group { margin: 15px 0; padding: 10px; background: #fff; border-radius: 4px; border: 1px solid #ddd; }
+            .ungrouped { margin: 15px 0; padding: 10px; background: #fafafa; border-radius: 4px; border: 1px solid #e0e0e0; }
             .tab { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
             .tab a { color: #1a73e8; text-decoration: none; }
             .tab a:hover { text-decoration: underline; }
             .meta { color: #666; font-size: 0.9em; margin-top: 5px; }
+            .window-name { color: #1a73e8; font-weight: bold; }
         </style>
 `;
 
@@ -153,37 +157,125 @@ function generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor
             return { tab, time: tabTime, source: 'current-time' };
         });
 
-        const windowFolderName = formatWindowFolder(oldestTabTime, window.tabs.length, window.tabs[0]?.title || '', windowIndex + 1);
+        const windowName = window.title || '';
+        const windowFolderName = formatWindowFolder(oldestTabTime, window.tabs.length, window.tabs[0]?.title || '', windowIndex + 1, windowName);
 
         html += `
         <div class="window">
-            <h2>Window ${windowIndex + 1}</h2>
+            <h2>Window ${windowIndex + 1}${ windowName ? ` - <span class="window-name">${escapeHtml(windowName)}</span>` : ''}</h2>
             <div class="timestamp">Oldest tab: ${formatTimestamp(oldestTabTime)}</div>
-            <div class="timestamp">Folder: ${windowFolderName}</div>
+            <div class="timestamp">Folder: ${windowFolderName}</div>`;
+
+        // Group tabs by groupId if groupsMap is available
+        if (groupsMap && groupsMap.size > 0) {
+            const tabsByGroup = new Map();
+            const ungroupedTabs = [];
+
+            tabTimestamps.forEach(({ tab, time, source }) => {
+                if (tab.groupId !== undefined && tab.groupId !== -1) {
+                    if (!tabsByGroup.has(tab.groupId)) {
+                        tabsByGroup.set(tab.groupId, []);
+                    }
+                    tabsByGroup.get(tab.groupId).push({ tab, time, source });
+                } else {
+                    ungroupedTabs.push({ tab, time, source });
+                }
+            });
+
+            // Render grouped tabs
+            for (const [groupId, groupTabs] of tabsByGroup) {
+                const group = groupsMap.get(groupId);
+                const groupName = group?.title || `Group-${groupId}`;
+                const groupColor = group?.color || 'grey';
+
+                html += `
+            <div class="group">
+                <h3>📁 Group: ${escapeHtml(groupName)} <span style="color: ${groupColor};">●</span> (${groupTabs.length} tabs)</h3>
+                <div class="tabs">`;
+
+                groupTabs.forEach(({ tab, time, source }) => {
+                    const prefix = formatTimestamp(time);
+                    const timeSource = {
+                        'url-history': 'Using URL visit time',
+                        'tab-creation': 'Using tab creation time',
+                        'current-time': 'Using current time (no history available)'
+                    }[source];
+
+                    html += `
+                    <div class="tab">
+                        <a href="${escapeHtml(tab.url)}" target="_blank">${escapeHtml(tab.title || tab.url)}</a>
+                        <div class="meta">
+                            Created: ${prefix}<br>
+                            Bookmark name: ${prefix} ${escapeHtml(tab.title || tab.url)}
+                            <br>${timeSource}
+                        </div>
+                    </div>`;
+                });
+
+                html += `
+                </div>
+            </div>`;
+            }
+
+            // Render ungrouped tabs
+            if (ungroupedTabs.length > 0) {
+                html += `
+            <div class="ungrouped">
+                <h3>📄 Ungrouped Tabs (${ungroupedTabs.length})</h3>
+                <div class="tabs">`;
+
+                ungroupedTabs.forEach(({ tab, time, source }) => {
+                    const prefix = formatTimestamp(time);
+                    const timeSource = {
+                        'url-history': 'Using URL visit time',
+                        'tab-creation': 'Using tab creation time',
+                        'current-time': 'Using current time (no history available)'
+                    }[source];
+
+                    html += `
+                    <div class="tab">
+                        <a href="${escapeHtml(tab.url)}" target="_blank">${escapeHtml(tab.title || tab.url)}</a>
+                        <div class="meta">
+                            Created: ${prefix}<br>
+                            Bookmark name: ${prefix} ${escapeHtml(tab.title || tab.url)}
+                            <br>${timeSource}
+                        </div>
+                    </div>`;
+                });
+
+                html += `
+                </div>
+            </div>`;
+            }
+        } else {
+            // No groups available, render all tabs flat
+            html += `
             <div class="tabs">`;
 
-        tabTimestamps.forEach(({ tab, time, source }) => {
-            const prefix = formatTimestamp(time);  // Use the time we already computed
+            tabTimestamps.forEach(({ tab, time, source }) => {
+                const prefix = formatTimestamp(time);
+                const timeSource = {
+                    'url-history': 'Using URL visit time',
+                    'tab-creation': 'Using tab creation time',
+                    'current-time': 'Using current time (no history available)'
+                }[source];
 
-            const timeSource = {
-                'url-history': 'Using URL visit time',
-                'tab-creation': 'Using tab creation time',
-                'current-time': 'Using current time (no history available)'
-            }[source];
+                html += `
+                    <div class="tab">
+                        <a href="${escapeHtml(tab.url)}" target="_blank">${escapeHtml(tab.title || tab.url)}</a>
+                        <div class="meta">
+                            Created: ${prefix}<br>
+                            Bookmark name: ${prefix} ${escapeHtml(tab.title || tab.url)}
+                            <br>${timeSource}
+                        </div>
+                    </div>`;
+            });
 
             html += `
-                <div class="tab">
-                    <a href="${escapeHtml(tab.url)}" target="_blank">${escapeHtml(tab.title || tab.url)}</a>
-                    <div class="meta">
-                        Created: ${prefix}<br>
-                        Bookmark name: ${prefix} ${escapeHtml(tab.title || tab.url)}
-                        <br>${timeSource}
-                    </div>
-                </div>`;
-        });
+            </div>`;
+        }
 
         html += `
-            </div>
         </div>`;
     });
 

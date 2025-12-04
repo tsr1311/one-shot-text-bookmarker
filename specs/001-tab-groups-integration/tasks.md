@@ -90,10 +90,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Modify downloadTabContent() function in utils.js to retrieve group data for tab
-- [ ] T025 [US3] Generate group comment in downloadTabContent() in utils.js (format: `<!-- tab-context: {groupname} -->`)
-- [ ] T026 [US3] Handle ungrouped tabs in downloadTabContent() in utils.js (comment: `<!-- tab-context: ungrouped -->`)
-- [ ] T027 [US3] Prepend group comment to HTML content before creating Blob in utils.js
+- [x] T024 [US3] Modify downloadTabContent() function in utils.js to retrieve group data for tab
+- [x] T025 [US3] Generate group comment in downloadTabContent() in utils.js (format: `<!-- tab-context: {groupname} -->`)
+- [x] T026 [US3] Handle ungrouped tabs in downloadTabContent() in utils.js (comment: `<!-- tab-context: ungrouped -->`)
+- [x] T027 [US3] Prepend group comment to HTML content before creating Blob in utils.js
 - [ ] T028 [US3] Test grouped tab downloads contain correct group name comment (manual testing)
 - [ ] T029 [US3] Test ungrouped tab downloads contain "ungrouped" comment (manual testing)
 
