@@ -603,7 +603,7 @@ ${extractedComments}${pageData.html}`;
 }
 
 // Download all tabs content in a window with group and tab folder structure
-async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap = null) {
+async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap = null, divExtractionPairs = '', useDomainSubfolder = false) {
     // Group tabs by groupId (matching bookmark structure)
     const tabsByGroup = new Map();
     const ungroupedTabs = [];
@@ -631,12 +631,18 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
             const tabTime = new Date(tabTimestamp);
             const prefix = formatTimestamp(tabTime);
             
-            // Create path: windowFolder/groupFolder/tabFolder
+            // Create path: windowFolder/groupFolder/tabFolder or windowFolder/groupFolder/tabFolder/domain
             const tabFolderName = formatTabFolder(tab.title, tab.id);
-            const tabFolderPath = `${windowFolderPath}/${groupName}/${tabFolderName}`;
+            let tabFolderPath = `${windowFolderPath}/${groupName}/${tabFolderName}`;
+            
+            // Add domain subfolder if enabled
+            if (useDomainSubfolder) {
+                const domain = new URL(tab.url).hostname;
+                tabFolderPath = `${tabFolderPath}/${domain}`;
+            }
             
             downloadPromises.push(
-                downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, groupName)
+                downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, groupName, divExtractionPairs)
                     .catch(error => console.error(`Error downloading grouped tab ${tab.title}:`, error))
             );
         }
@@ -648,12 +654,18 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
         const tabTime = new Date(tabTimestamp);
         const prefix = formatTimestamp(tabTime);
         
-        // Create path: windowFolder/tabFolder
+        // Create path: windowFolder/tabFolder or windowFolder/tabFolder/domain
         const tabFolderName = formatTabFolder(tab.title, tab.id);
-        const tabFolderPath = `${windowFolderPath}/${tabFolderName}`;
+        let tabFolderPath = `${windowFolderPath}/${tabFolderName}`;
+        
+        // Add domain subfolder if enabled
+        if (useDomainSubfolder) {
+            const domain = new URL(tab.url).hostname;
+            tabFolderPath = `${tabFolderPath}/${domain}`;
+        }
         
         downloadPromises.push(
-            downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, null)
+            downloadTabContent(tab, tabFolderPath, prefix, selector, excludeElements, null, divExtractionPairs)
                 .catch(error => console.error(`Error downloading ungrouped tab ${tab.title}:`, error))
         );
     }
