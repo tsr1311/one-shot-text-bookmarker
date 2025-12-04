@@ -284,9 +284,9 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector) {
             const pageData = results[0].result;
             
             // Create HTML content with metadata
-            const htmlContent = `<!-- Saved from: ${pageData.url} -->
-<!-- Saved on: ${new Date().toISOString()} -->
-<!-- Original title: ${escapeHtml(pageData.title)} -->
+            const htmlContent = `<!-- url: ${pageData.url} -->
+<!-- saved_ts: ${new Date().toISOString()} -->
+<!-- page-title: ${escapeHtml(pageData.title)} -->
 ${pageData.html}`;
 
             // Create blob and download
