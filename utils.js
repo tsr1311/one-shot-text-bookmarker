@@ -252,6 +252,8 @@ async function createPlaceholderFile(folderPath) {
 }
 
 // Download tab content as HTML file
+// Note: Some pages (like chrome://, chrome-extension://, Google Drive, etc.) cannot be accessed
+// due to browser security restrictions. These will be skipped gracefully.
 async function downloadTabContent(tab, folderPath, filePrefix, selector, excludeElements) {
     try {
         // Create a safe filename from the tab title
@@ -350,7 +352,12 @@ ${pageData.html}`;
             console.log(`Downloaded: ${filename}`);
         }
     } catch (error) {
-        console.error(`Failed to download tab content for ${tab.title}:`, error);
+        // Check if this is a permissions error (expected for some sites)
+        if (error.message && error.message.includes('Cannot access contents')) {
+            console.log(`Skipping tab: ${tab.title} - Extension doesn't have permission to access this page (${tab.url})`);
+        } else {
+            console.error(`Failed to download tab content for ${tab.title}:`, error);
+        }
         // Don't throw error to prevent stopping the entire process
     }
 }
