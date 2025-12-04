@@ -502,14 +502,25 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                             }
                         }
                         
+                        console.log('Extraction debug:', { 
+                            line, 
+                            elementType, 
+                            attributeSelector, 
+                            jsonPath, 
+                            commentName 
+                        });
+                        
                         // Find all elements of specified type that match the attribute selector
                         const elements = document.querySelectorAll(elementType);
+                        console.log(`Found ${elements.length} ${elementType} elements`);
                         
                         for (const element of elements) {
                             // Check if the element's outerHTML contains all the attributes specified
                             const outerHTML = element.outerHTML;
                             const attributes = attributeSelector.split(/\\s+/);
                             let allMatch = true;
+                            
+                            console.log('Checking element:', { outerHTML: outerHTML.substring(0, 200), attributes });
                             
                             for (const attr of attributes) {
                                 if (!outerHTML.includes(attr)) {
@@ -518,14 +529,19 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                                 }
                             }
                             
+                            console.log('Match result:', allMatch);
+                            
                             if (allMatch) {
                                 let extractedText = '';
                                 
                                 // For script tags with JSON, extract and parse
                                 if (elementType === 'script' && jsonPath) {
+                                    console.log('Attempting JSON extraction...');
                                     try {
                                         const jsonContent = element.textContent || element.innerText || '';
+                                        console.log('JSON content length:', jsonContent.length);
                                         const jsonData = JSON.parse(jsonContent);
+                                        console.log('Parsed JSON:', jsonData);
                                         
                                         // Navigate the JSON path (e.g., "title" or "hiringOrganization.name")
                                         const pathParts = jsonPath.split('.');
@@ -539,6 +555,8 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                                                 break;
                                             }
                                         }
+                                        
+                                        console.log('Extracted value:', value);
                                         
                                         if (value !== null && value !== undefined) {
                                             extractedText = typeof value === 'string' ? value : JSON.stringify(value);
