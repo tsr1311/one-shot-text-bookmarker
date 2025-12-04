@@ -475,18 +475,27 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                         const colonIndex = line.indexOf(':');
                         if (colonIndex === -1) continue;
                         
-                        const attributeSelector = line.substring(0, colonIndex).trim();
+                        let attributeSelector = line.substring(0, colonIndex).trim();
                         const commentName = line.substring(colonIndex + 1).trim();
                         
                         if (!attributeSelector || !commentName) continue;
                         
-                        // Find all DIVs that match the attribute selector
-                        // The selector should be attributes like: data-company-name="true" data-testid="companyName"
-                        const divs = document.querySelectorAll('div');
+                        // Check if selector specifies element type (e.g., "meta:property='og:description'")
+                        let elementType = 'div'; // default
+                        if (attributeSelector.includes(':')) {
+                            const parts = attributeSelector.split(':');
+                            if (parts[0].match(/^(meta|div|span|a|article|section|header)$/i)) {
+                                elementType = parts[0].toLowerCase();
+                                attributeSelector = parts.slice(1).join(':');
+                            }
+                        }
                         
-                        for (const div of divs) {
-                            // Check if the div's outerHTML contains all the attributes specified
-                            const outerHTML = div.outerHTML;
+                        // Find all elements of specified type that match the attribute selector
+                        const elements = document.querySelectorAll(elementType);
+                        
+                        for (const element of elements) {
+                            // Check if the element's outerHTML contains all the attributes specified
+                            const outerHTML = element.outerHTML;
                             const attributes = attributeSelector.split(/\\s+/);
                             let allMatch = true;
                             
@@ -498,9 +507,17 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
                             }
                             
                             if (allMatch) {
-                                // Extract visible text content (textContent gets text without HTML tags)
-                                const textContent = div.textContent || div.innerText || '';
-                                const cleanedText = textContent.trim();
+                                let extractedText = '';
+                                
+                                // For meta tags, extract the content attribute
+                                if (elementType === 'meta') {
+                                    extractedText = element.getAttribute('content') || '';
+                                } else {
+                                    // For other elements, extract visible text content
+                                    extractedText = element.textContent || element.innerText || '';
+                                }
+                                
+                                const cleanedText = extractedText.trim();
                                 
                                 if (cleanedText) {
                                     // Store first match for this comment name
