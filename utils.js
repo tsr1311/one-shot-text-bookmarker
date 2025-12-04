@@ -268,7 +268,7 @@ async function createPlaceholderFile(folderPath) {
 // Download tab content as HTML file
 // Note: Some pages (like chrome://, chrome-extension://, Google Drive, etc.) cannot be accessed
 // due to browser security restrictions. These will be skipped gracefully.
-async function downloadTabContent(tab, folderPath, filePrefix, selector, excludeElements) {
+async function downloadTabContent(tab, folderPath, filePrefix, selector, excludeElements, groupName = null) {
     try {
         // Create a safe filename from the tab title
         const safeTitle = (tab.title || 'untitled')
@@ -341,11 +341,16 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
         if (results && results[0] && results[0].result) {
             const pageData = results[0].result;
             
+            // Generate group context comment
+            const groupContext = groupName ? groupName : 'ungrouped';
+            const tabContextComment = `<!-- tab-context: ${escapeHtml(groupContext)} -->`;
+            
             // Create HTML content with metadata
             const htmlContent = `<!-- url: ${pageData.url} -->
 <!-- url-domain: ${pageData.domain} -->
 <!-- url-ts-saved: ${new Date().toISOString()} -->
 <!-- page-title: ${escapeHtml(pageData.title)} -->
+${tabContextComment}
 ${pageData.html}`;
 
             // Create blob and download
@@ -377,7 +382,7 @@ ${pageData.html}`;
 }
 
 // Download all tabs content in a window
-async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements) {
+async function downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap = null) {
     const downloadPromises = window.tabs.map(async (tab, tabIndex) => {
         try {
             // Get tab timestamp for filename prefix
@@ -385,7 +390,14 @@ async function downloadWindowTabsContent(window, windowFolderPath, timestamps, w
             const tabTime = new Date(tabTimestamp);
             const prefix = formatTimestamp(tabTime);
             
-            await downloadTabContent(tab, windowFolderPath, prefix, selector, excludeElements);
+            // Get group name for this tab if available
+            let groupName = null;
+            if (groupsMap && tab.groupId !== undefined && tab.groupId !== -1) {
+                const group = groupsMap.get(tab.groupId);
+                groupName = group?.title || `Group-${tab.groupId}`;
+            }
+            
+            await downloadTabContent(tab, windowFolderPath, prefix, selector, excludeElements, groupName);
         } catch (error) {
             console.error(`Error downloading tab ${tabIndex + 1} in window ${windowIndex + 1}:`, error);
         }

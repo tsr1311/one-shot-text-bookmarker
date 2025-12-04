@@ -68,13 +68,13 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [P] [US2] Add bookmark path structure UI to popup.html (radio buttons for "window-group", hidden by default)
-- [ ] T016 [P] [US2] Add CSS styles for path structure section in popup.html (match existing progressive disclosure pattern)
-- [ ] T017 [US2] Add bookmarkPathStructure setting loader to popup.js DOMContentLoaded (load from chrome.storage.local)
-- [ ] T018 [US2] Add bookmarkPathStructure setting saver to popup.js (save on radio change, show ✓ Saved indicator)
-- [ ] T019 [US2] Show/hide path structure UI based on autoDownloadCheckbox or other trigger in popup.js
-- [ ] T020 [US2] Create buildBookmarkPath(window, group, pathStructure) function in utils.js
-- [ ] T021 [US2] Modify bookmark creation in utils.js to use buildBookmarkPath() with loaded pathStructure setting
+- [x] T015 [P] [US2] Add bookmark path structure UI to popup.html (radio buttons for "window-group", hidden by default)
+- [x] T016 [P] [US2] Add CSS styles for path structure section in popup.html (match existing progressive disclosure pattern)
+- [x] T017 [US2] Add bookmarkPathStructure setting loader to popup.js DOMContentLoaded (load from chrome.storage.local)
+- [x] T018 [US2] Add bookmarkPathStructure setting saver to popup.js (save on radio change, show ✓ Saved indicator)
+- [x] T019 [US2] Show/hide path structure UI based on autoDownloadCheckbox or other trigger in popup.js
+- [x] T020 [US2] Create buildBookmarkPath(window, group, pathStructure) function in utils.js
+- [x] T021 [US2] Modify bookmark creation in utils.js to use buildBookmarkPath() with loaded pathStructure setting
 - [ ] T022 [US2] Test path structure persistence across browser sessions (manual testing)
 - [ ] T023 [US2] Test changing path structure affects future saves only (manual testing)
 
