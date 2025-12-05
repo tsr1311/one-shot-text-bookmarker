@@ -413,8 +413,10 @@ async function saveWindows(windows, downloadPath) {
         // Initialize bookmark logging
         const bookmarkLog = [];
         
-        // Check if template includes {Tab-Name} placeholder (case-insensitive)
+        // Check if template includes placeholders (case-insensitive)
         const includeTabFolders = /\{tab-name\}/i.test(mainFolderTemplate);
+        const templateHasWindowName = /\{window-name\}/i.test(mainFolderTemplate);
+        const templateHasGroupName = /\{group-name\}/i.test(mainFolderTemplate);
         
         // Resolve main folder template (for now, use first window name and first group name as samples)
         const firstWindowName = windows[0]?.title || '';
@@ -480,10 +482,19 @@ async function saveWindows(windows, downloadPath) {
             const windowNumber = windowIndex + 1; // Convert 0-based index to 1-based window number
             // Use window title if available (custom window name), otherwise use first tab title
             const windowName = window.title || '';
-            const windowFolderName = formatWindowFolder(oldestTabTime, window.tabs.length, firstTabTitle, windowNumber, windowName, window.id);
-
-            // Create folder for this window under main folder
-            const windowFolder = await createBookmarkFolder(windowFolderName, mainFolder.id);
+            
+            let windowFolder;
+            let windowFolderName = '';
+            
+            // Only create window folder if {Window-Name} is NOT in template
+            if (!templateHasWindowName) {
+                windowFolderName = formatWindowFolder(oldestTabTime, window.tabs.length, firstTabTitle, windowNumber, windowName, window.id);
+                windowFolder = await createBookmarkFolder(windowFolderName, mainFolder.id);
+            } else {
+                // Template already has window structure, use mainFolder
+                windowFolder = mainFolder;
+                windowFolderName = ''; // Empty since it's part of mainFolderPath
+            }
 
             // Group tabs by groupId
             const tabsByGroup = new Map();
@@ -518,8 +529,18 @@ async function saveWindows(windows, downloadPath) {
                 const groupTitle = group?.title || '';
                 const groupName = sanitizeGroupName(groupTitle, groupId);
                 
-                // Create group folder under window folder
-                const groupFolder = await createBookmarkFolder(groupName, windowFolder.id);
+                let groupFolder;
+                let effectiveGroupName = '';
+                
+                // Only create group folder if {Group-Name} is NOT in template
+                if (!templateHasGroupName) {
+                    groupFolder = await createBookmarkFolder(groupName, windowFolder.id);
+                    effectiveGroupName = groupName;
+                } else {
+                    // Template already has group structure, use windowFolder directly
+                    groupFolder = windowFolder;
+                    effectiveGroupName = ''; // Empty since it's part of mainFolderPath
+                }
                 
                 // Save tabs in this group with tab-level folders
                 for (const tab of groupTabs) {
@@ -535,11 +556,31 @@ async function saveWindows(windows, downloadPath) {
                         const tabFolderName = formatTabFolder(tab.title, tab.id);
                         const tabFolder = await createBookmarkFolder(tabFolderName, groupFolder.id);
                         bookmarkParentId = tabFolder.id;
-                        bookmarkPath = `${mainFolderPath}/${windowFolderName}/${groupName}/${tabFolderName}`;
+                        
+                        // Build path based on what's in template
+                        if (effectiveGroupName) {
+                            bookmarkPath = windowFolderName 
+                                ? `${mainFolderPath}/${windowFolderName}/${effectiveGroupName}/${tabFolderName}`
+                                : `${mainFolderPath}/${effectiveGroupName}/${tabFolderName}`;
+                        } else {
+                            bookmarkPath = windowFolderName
+                                ? `${mainFolderPath}/${windowFolderName}/${tabFolderName}`
+                                : `${mainFolderPath}/${tabFolderName}`;
+                        }
                     } else {
                         // Create bookmark directly under group folder
                         bookmarkParentId = groupFolder.id;
-                        bookmarkPath = `${mainFolderPath}/${windowFolderName}/${groupName}`;
+                        
+                        // Build path based on what's in template
+                        if (effectiveGroupName) {
+                            bookmarkPath = windowFolderName
+                                ? `${mainFolderPath}/${windowFolderName}/${effectiveGroupName}`
+                                : `${mainFolderPath}/${effectiveGroupName}`;
+                        } else {
+                            bookmarkPath = windowFolderName
+                                ? `${mainFolderPath}/${windowFolderName}`
+                                : mainFolderPath;
+                        }
                     }
                     
                     // Create bookmark
@@ -568,11 +609,15 @@ async function saveWindows(windows, downloadPath) {
                     const tabFolderName = formatTabFolder(tab.title, tab.id);
                     const tabFolder = await createBookmarkFolder(tabFolderName, windowFolder.id);
                     bookmarkParentId = tabFolder.id;
-                    bookmarkPath = `${mainFolderPath}/${windowFolderName}/${tabFolderName}`;
+                    bookmarkPath = windowFolderName
+                        ? `${mainFolderPath}/${windowFolderName}/${tabFolderName}`
+                        : `${mainFolderPath}/${tabFolderName}`;
                 } else {
                     // Create bookmark directly under window folder
                     bookmarkParentId = windowFolder.id;
-                    bookmarkPath = `${mainFolderPath}/${windowFolderName}`;
+                    bookmarkPath = windowFolderName
+                        ? `${mainFolderPath}/${windowFolderName}`
+                        : mainFolderPath;
                 }
                 
                 // Create bookmark
