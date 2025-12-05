@@ -425,14 +425,20 @@ async function saveWindows(windows, downloadPath) {
         
         // Create bookmark folder structure from resolved path
         // First part becomes the root folder in Bookmarks Bar
+        // If template is empty, use Bookmarks Bar root (parentId '1')
         let currentParentId = null;
         const pathParts = mainFolderPath.split('/').filter(p => p);
         
-        for (let i = 0; i < pathParts.length; i++) {
-            const part = pathParts[i];
-            const isRootFolder = (i === 0 && currentParentId === null);
-            const folder = await createBookmarkFolder(part, currentParentId, isRootFolder);
-            currentParentId = folder.id;
+        if (pathParts.length === 0) {
+            // Empty template: use Bookmarks Bar root
+            currentParentId = '1';
+        } else {
+            for (let i = 0; i < pathParts.length; i++) {
+                const part = pathParts[i];
+                const isRootFolder = (i === 0 && currentParentId === null);
+                const folder = await createBookmarkFolder(part, currentParentId, isRootFolder);
+                currentParentId = folder.id;
+            }
         }
         
         const mainFolder = { id: currentParentId };
@@ -486,14 +492,14 @@ async function saveWindows(windows, downloadPath) {
             let windowFolder;
             let windowFolderName = '';
             
-            // Only create window folder if {Window-Name} is NOT in template
-            if (!templateHasWindowName) {
+            // Only create window folder if {Window-Name} IS in template
+            if (templateHasWindowName) {
                 windowFolderName = formatWindowFolder(oldestTabTime, window.tabs.length, firstTabTitle, windowNumber, windowName, window.id);
                 windowFolder = await createBookmarkFolder(windowFolderName, mainFolder.id);
             } else {
-                // Template already has window structure, use mainFolder
+                // No window placeholder in template, use mainFolder directly
                 windowFolder = mainFolder;
-                windowFolderName = ''; // Empty since it's part of mainFolderPath
+                windowFolderName = ''; // No window folder created
             }
 
             // Group tabs by groupId
@@ -532,14 +538,14 @@ async function saveWindows(windows, downloadPath) {
                 let groupFolder;
                 let effectiveGroupName = '';
                 
-                // Only create group folder if {Group-Name} is NOT in template
-                if (!templateHasGroupName) {
+                // Only create group folder if {Group-Name} IS in template
+                if (templateHasGroupName) {
                     groupFolder = await createBookmarkFolder(groupName, windowFolder.id);
                     effectiveGroupName = groupName;
                 } else {
-                    // Template already has group structure, use windowFolder directly
+                    // No group placeholder in template, use windowFolder directly
                     groupFolder = windowFolder;
-                    effectiveGroupName = ''; // Empty since it's part of mainFolderPath
+                    effectiveGroupName = ''; // No group folder created
                 }
                 
                 // Save tabs in this group with tab-level folders
