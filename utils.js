@@ -1,4 +1,4 @@
-const MAX_TITLE_LENGTH = 24;
+const MAX_TITLE_LENGTH = 120;
 
 // Sanitize download path - handles subfolder names relative to Downloads
 function sanitizePath(path) {
@@ -50,11 +50,16 @@ function resolveMainFolderTemplate(template, date = new Date(), windowName = '',
     
     // Sanitize the resolved path
     resolved = resolved
-        .replace(/[<>:"|?*]/g, '_')
-        .replace(/\\/g, '/')
-        .replace(/\/+/g, '/')  // Replace multiple slashes with single
-        .replace(/^\/+/, '')   // Remove leading slashes
-        .replace(/\/+$/, '');  // Remove trailing slashes
+        .replace(/[<>:"|?*]/g, '_')  // Remove invalid characters
+        .replace(/\\/g, '/')          // Convert backslashes to forward slashes
+        .replace(/\/+/g, '/')         // Replace multiple slashes with single
+        .replace(/^\/+/, '')          // Remove leading slashes
+        .replace(/\/+$/, '');         // Remove trailing slashes
+    
+    // If empty after sanitization, return default
+    if (!resolved) {
+        resolved = `OSBed-${envDescriptor}/${year}${month}${day}`;
+    }
     
     return resolved;
 }
@@ -74,8 +79,8 @@ function buildBookmarkPath(windowFolder, groupName, pathStructure = 'window-grou
 }
 
 // Get or create the main OSB folder for all saved windows
-async function getOrCreateMainFolder(envDescriptor) {
-    const mainFolderName = `OSBed-${envDescriptor}`;
+async function getOrCreateMainFolder(mainFolderName) {
+    //const mainFolderName = `OSBed-${envDescriptor}`;
     const existing = await chrome.bookmarks.search({ title: mainFolderName });
     const existingFolder = existing.find(b => b.parentId === '1' && !b.url);
 
@@ -346,7 +351,7 @@ function generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor
 async function createBookmarkFolder(name, parentId = null, envDescriptor = null) {
     // If no parent ID is provided, create/get the main folder
     if (!parentId) {
-        const mainFolder = await getOrCreateMainFolder(envDescriptor);
+        const mainFolder = await getOrCreateMainFolder(name);
         parentId = mainFolder.id;
     }
 
@@ -604,8 +609,8 @@ async function downloadTabContent(tab, folderPath, filePrefix, selector, exclude
             
             // Split page title by '-' and create numbered comments
             let pageTitleComments = `<!-- page-title: ${escapeHtml(pageData.title)} -->\n`;
-            if (pageData.title && pageData.title.includes('-')) {
-                const titleParts = pageData.title.split('-').map(part => part.trim()).filter(part => part);
+            if (pageData.title && pageData.title.includes(' - ')) {
+                const titleParts = pageData.title.split(' - ').map(part => part.trim()).filter(part => part);
                 titleParts.forEach((part, index) => {
                     const num = String(index + 1).padStart(3, '0');
                     pageTitleComments += `<!-- page-title-${num}: ${escapeHtml(part)} -->\n`;
