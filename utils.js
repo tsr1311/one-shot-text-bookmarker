@@ -28,6 +28,7 @@ function sanitizeGroupName(groupTitle, groupId) {
 
 // Resolve main folder path template with variables
 // Variables: {YYYYMMDD}, {HHMM}, {OS-environment}, {Window-Name}, {Group-Name}, or custom text
+// Placeholders are CASE-INSENSITIVE
 function resolveMainFolderTemplate(template, date = new Date(), windowName = '', groupName = '', envDescriptor = '') {
     if (!template) {
         // Default template
@@ -40,13 +41,13 @@ function resolveMainFolderTemplate(template, date = new Date(), windowName = '',
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     
-    // Resolve variables
+    // Resolve variables (case-insensitive)
     let resolved = template
-        .replace(/\{YYYYMMDD\}/g, `${year}${month}${day}`)
-        .replace(/\{HHMM\}/g, `${hours}${minutes}`)
-        .replace(/\{OS-environment\}/g, envDescriptor || 'OSBed-Unknown')
-        .replace(/\{Window-Name\}/g, windowName || 'Window')
-        .replace(/\{Group-Name\}/g, groupName || 'NoGroup');
+        .replace(/\{yyyymmdd\}/gi, `${year}${month}${day}`)
+        .replace(/\{hhmm\}/gi, `${hours}${minutes}`)
+        .replace(/\{os-environment\}/gi, envDescriptor || 'OSBed-Unknown')
+        .replace(/\{window-name\}/gi, windowName || 'Window')
+        .replace(/\{group-name\}/gi, groupName || 'NoGroup');
     
     // Sanitize the resolved path
     resolved = resolved
@@ -79,8 +80,9 @@ function buildBookmarkPath(windowFolder, groupName, pathStructure = 'window-grou
 }
 
 // Get or create the main OSB folder for all saved windows
+// This is the root bookmark folder (first part of template path)
 async function getOrCreateMainFolder(mainFolderName) {
-    //const mainFolderName = `OSBed-${envDescriptor}`;
+    // Search for existing folder in Bookmarks Bar (parentId: '1')
     const existing = await chrome.bookmarks.search({ title: mainFolderName });
     const existingFolder = existing.find(b => b.parentId === '1' && !b.url);
 
@@ -88,8 +90,9 @@ async function getOrCreateMainFolder(mainFolderName) {
         return existingFolder;
     }
 
+    // Create new root folder in Bookmarks Bar
     return await chrome.bookmarks.create({
-        parentId: '1',
+        parentId: '1',  // Bookmarks Bar
         title: mainFolderName
     });
 }
@@ -348,11 +351,12 @@ function generateOverviewHtml(windows, timestamps, mainFolderName, envDescriptor
 }
 
 // Create a bookmark folder and return it
-async function createBookmarkFolder(name, parentId = null, envDescriptor = null) {
-    // If no parent ID is provided, create/get the main folder
-    if (!parentId) {
+// If no parent ID is provided, the name is treated as the root folder in Bookmarks Bar
+async function createBookmarkFolder(name, parentId = null, isRootFolder = false) {
+    // If no parent ID is provided, this is the root folder
+    if (!parentId || isRootFolder) {
         const mainFolder = await getOrCreateMainFolder(name);
-        parentId = mainFolder.id;
+        return mainFolder;
     }
 
     // Check if folder already exists under the parent

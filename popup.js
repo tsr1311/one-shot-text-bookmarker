@@ -416,11 +416,14 @@ async function saveWindows(windows, downloadPath) {
         const mainFolderPath = resolveMainFolderTemplate(mainFolderTemplate, today, firstWindowName, firstGroupName, envDescriptor);
         
         // Create bookmark folder structure from resolved path
+        // First part becomes the root folder in Bookmarks Bar
         let currentParentId = null;
         const pathParts = mainFolderPath.split('/').filter(p => p);
         
-        for (const part of pathParts) {
-            const folder = await createBookmarkFolder(part, currentParentId, currentParentId === null ? envDescriptor : null);
+        for (let i = 0; i < pathParts.length; i++) {
+            const part = pathParts[i];
+            const isRootFolder = (i === 0 && currentParentId === null);
+            const folder = await createBookmarkFolder(part, currentParentId, isRootFolder);
             currentParentId = folder.id;
         }
         
