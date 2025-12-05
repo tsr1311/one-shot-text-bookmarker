@@ -41,13 +41,29 @@ function resolveMainFolderTemplate(template, date = new Date(), windowName = '',
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     
+    // Sanitize and handle fallbacks for window and group names
+    // Use fallback only if name is empty, null, or undefined
+    let finalWindowName = windowName;
+    let finalGroupName = groupName;
+    
+    if (!finalWindowName) {
+        finalWindowName = 'Window';
+    }
+    if (!finalGroupName) {
+        finalGroupName = 'NoGroup';
+    }
+    
+    // Sanitize names (replace invalid filename chars)
+    finalWindowName = finalWindowName.replace(/[<>:"|?*\/\\]/g, '_');
+    finalGroupName = finalGroupName.replace(/[<>:"|?*\/\\]/g, '_');
+    
     // Resolve variables (case-insensitive)
     let resolved = template
         .replace(/\{yyyymmdd\}/gi, `${year}${month}${day}`)
         .replace(/\{hhmm\}/gi, `${hours}${minutes}`)
         .replace(/\{os-environment\}/gi, envDescriptor || 'OSBed-Unknown')
-        .replace(/\{window-name\}/gi, windowName || 'Window')
-        .replace(/\{group-name\}/gi, groupName || 'NoGroup');
+        .replace(/\{window-name\}/gi, finalWindowName)
+        .replace(/\{group-name\}/gi, finalGroupName);
     
     // Sanitize the resolved path
     resolved = resolved
