@@ -416,31 +416,6 @@ async function saveWindows(windows, downloadPath) {
         // Check if template includes {Tab-Name} placeholder (case-insensitive)
         const includeTabFolders = /\{tab-name\}/i.test(mainFolderTemplate);
         
-        // Resolve main folder template (for now, use first window name and first group name as samples)
-        const firstWindowName = windows[0]?.title || '';
-        const firstGroupName = groupsMap.size > 0 ? Array.from(groupsMap.values())[0]?.title || '' : '';
-        const mainFolderPath = resolveMainFolderTemplate(mainFolderTemplate, today, firstWindowName, firstGroupName, envDescriptor);
-        
-        // Create bookmark folder structure from resolved path
-        // First part becomes the root folder in Bookmarks Bar
-        // If template is empty, use Bookmarks Bar root (parentId '1')
-        let currentParentId = null;
-        const pathParts = mainFolderPath.split('/').filter(p => p);
-        
-        if (pathParts.length === 0) {
-            // Empty template: use Bookmarks Bar root
-            currentParentId = '1';
-        } else {
-            for (let i = 0; i < pathParts.length; i++) {
-                const part = pathParts[i];
-                const isRootFolder = (i === 0 && currentParentId === null);
-                const folder = await createBookmarkFolder(part, currentParentId, isRootFolder);
-                currentParentId = folder.id;
-            }
-        }
-        
-        const mainFolder = { id: currentParentId };
-        
         // For backward compatibility, also create the old-style folder name for overview file naming
         const mainFolderName = formatMainFolderName(today, windows.length, totalTabs);
 
@@ -450,10 +425,10 @@ async function saveWindows(windows, downloadPath) {
             const blob = new Blob([overviewHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
 
-            // Use the resolved main folder path for downloads as well
+            // Use base download path for overview
             const overviewFilename = sanitizedPath 
-                ? `${sanitizedPath}/${mainFolderPath}/${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`
-                : `${mainFolderPath}/${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`;
+                ? `${sanitizedPath}/${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`
+                : `${envDescriptor}_${mainFolderName}_OneShotBookmarked.htm`;
 
             await chrome.downloads.download({
                 url: url,
@@ -471,6 +446,29 @@ async function saveWindows(windows, downloadPath) {
                 statusDiv.textContent = `Processing window ${windowIndex + 1}/${windows.length}...`;
             }
 
+            // Resolve template for THIS window specifically
+            const windowName = window.title || '';
+            const firstGroupName = groupsMap.size > 0 ? Array.from(groupsMap.values())[0]?.title || '' : '';
+            const windowFolderPath = resolveMainFolderTemplate(mainFolderTemplate, today, windowName, firstGroupName, envDescriptor);
+            
+            // Create bookmark folder structure for this window
+            let currentParentId = null;
+            const pathParts = windowFolderPath.split('/').filter(p => p);
+            
+            if (pathParts.length === 0) {
+                // Empty template: use Bookmarks Bar root
+                currentParentId = '1';
+            } else {
+                for (let i = 0; i < pathParts.length; i++) {
+                    const part = pathParts[i];
+                    const isRootFolder = (i === 0 && currentParentId === null);
+                    const folder = await createBookmarkFolder(part, currentParentId, isRootFolder);
+                    currentParentId = folder.id;
+                }
+            }
+            
+            const windowFolder = { id: currentParentId };
+
             // Find oldest tab timestamp in this window
             let oldestTabTime = today;
             for (const tab of window.tabs) {
@@ -480,12 +478,6 @@ async function saveWindows(windows, downloadPath) {
                     oldestTabTime = tabTime;
                 }
             }
-
-            // Window folder: Template controls all structure
-            // If {Window-Name} is in template, it's already resolved in mainFolder path
-            // No additional window folders are created
-            const windowFolder = mainFolder;
-            const windowFolderName = ''; // No automatic window folder
 
             // Group tabs by groupId
             const tabsByGroup = new Map();
@@ -535,11 +527,11 @@ async function saveWindows(windows, downloadPath) {
                         const tabFolderName = formatTabFolder(tab.title, tab.id);
                         const tabFolder = await createBookmarkFolder(tabFolderName, groupFolder.id);
                         bookmarkParentId = tabFolder.id;
-                        bookmarkPath = mainFolderPath ? `${mainFolderPath}/${tabFolderName}` : tabFolderName;
+                        bookmarkPath = windowFolderPath ? `${windowFolderPath}/${tabFolderName}` : tabFolderName;
                     } else {
                         // Create bookmark directly
                         bookmarkParentId = groupFolder.id;
-                        bookmarkPath = mainFolderPath || 'Bookmarks Bar';
+                        bookmarkPath = windowFolderPath || 'Bookmarks Bar';
                     }
                     
                     // Create bookmark
@@ -568,11 +560,11 @@ async function saveWindows(windows, downloadPath) {
                     const tabFolderName = formatTabFolder(tab.title, tab.id);
                     const tabFolder = await createBookmarkFolder(tabFolderName, windowFolder.id);
                     bookmarkParentId = tabFolder.id;
-                    bookmarkPath = mainFolderPath ? `${mainFolderPath}/${tabFolderName}` : tabFolderName;
+                    bookmarkPath = windowFolderPath ? `${windowFolderPath}/${tabFolderName}` : tabFolderName;
                 } else {
                     // Create bookmark directly
                     bookmarkParentId = windowFolder.id;
-                    bookmarkPath = mainFolderPath || 'Bookmarks Bar';
+                    bookmarkPath = windowFolderPath || 'Bookmarks Bar';
                 }
                 
                 // Create bookmark
@@ -588,15 +580,15 @@ async function saveWindows(windows, downloadPath) {
 
             // Download tab contents if auto-download is enabled
             if (autoDownloadEnabled) {
-                let windowFolderPath;
+                let downloadFolderPath;
                 if (useParentFolders) {
                     // Use parent folder structure matching bookmarks
-                    windowFolderPath = sanitizedPath ? `${sanitizedPath}/${mainFolderPath}` : mainFolderPath;
+                    downloadFolderPath = sanitizedPath ? `${sanitizedPath}/${windowFolderPath}` : windowFolderPath;
                 } else {
                     // Flat structure: just use base path (or Downloads root if empty)
-                    windowFolderPath = sanitizedPath || 'OneShot-Bookmarks';
+                    downloadFolderPath = sanitizedPath || 'OneShot-Bookmarks';
                 }
-                await downloadWindowTabsContent(window, windowFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap, divExtractionPairs, pathOptions);
+                await downloadWindowTabsContent(window, downloadFolderPath, timestamps, windowIndex, selector, excludeElements, groupsMap, divExtractionPairs, pathOptions);
             }
         }
 
@@ -612,8 +604,8 @@ async function saveWindows(windows, downloadPath) {
             const hours = String(today.getHours()).padStart(2, '0');
             const minutes = String(today.getMinutes()).padStart(2, '0');
             const logFilename = sanitizedPath 
-                ? `${sanitizedPath}/${mainFolderPath}/${year}${month}${day}${hours}${minutes}_logging.txt`
-                : `${mainFolderPath}/${year}${month}${day}${hours}${minutes}_logging.txt`;
+                ? `${sanitizedPath}/${year}${month}${day}${hours}${minutes}_logging.txt`
+                : `${year}${month}${day}${hours}${minutes}_logging.txt`;
             
             await chrome.downloads.download({
                 url: logUrl,

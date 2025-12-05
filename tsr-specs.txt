@@ -1,0 +1,10 @@
+    these options (RULES) can be added by domain-urls:
+    - CSS Selector
+    - Exclude Elements
+    - Element Content Extraction
+    i.e. there is a RULES section, where a new rule can be added by pressing (+):
+        - a new dropdown appears with all available rules (currently: CSS-Selector, Filter-HTML-elements, HTML-Elements-Content-Extraction) 
+        - right next to it an input field appears named "DOMAIN", default "*", measnng this rule applies to all domain-urls. If DOMAIN is specified, the RULE only applies to tabs/pages with the matching domain-urls
+        - depending on the RULE selecte, one or two input fields appear right next to the DOMAIN input field:
+            - if RULE = "HTML-Elements-Content-Extraction" then TWO input fields appear, KEY and VALUE, for downstream handling as it is currently (text field Element Content Extraction contains {KEY} : {VALUE})
+            - if RULE is NOT "HTML-Elements-Content-Extraction" then ONE input field appears, named "VALUES"
