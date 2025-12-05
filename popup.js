@@ -410,6 +410,12 @@ async function saveWindows(windows, downloadPath) {
         // Create main folder using template
         const today = new Date();
         
+        // Initialize bookmark logging
+        const bookmarkLog = [];
+        
+        // Check if template includes {Tab-Name} placeholder (case-insensitive)
+        const includeTabFolders = /\{tab-name\}/i.test(mainFolderTemplate);
+        
         // Resolve main folder template (for now, use first window name and first group name as samples)
         const firstWindowName = windows[0]?.title || '';
         const firstGroupName = groupsMap.size > 0 ? Array.from(groupsMap.values())[0]?.title || '' : '';
@@ -521,16 +527,30 @@ async function saveWindows(windows, downloadPath) {
                     const tabCreationTime = new Date(tabTimestamp);
                     const prefix = formatTimestamp(tabCreationTime);
                     
-                    // Create tab folder under group folder
-                    const tabFolderName = formatTabFolder(tab.title, tab.id);
-                    const tabFolder = await createBookmarkFolder(tabFolderName, groupFolder.id);
+                    let bookmarkParentId;
+                    let bookmarkPath;
                     
-                    // Create bookmark in tab folder
+                    if (includeTabFolders) {
+                        // Create tab folder under group folder
+                        const tabFolderName = formatTabFolder(tab.title, tab.id);
+                        const tabFolder = await createBookmarkFolder(tabFolderName, groupFolder.id);
+                        bookmarkParentId = tabFolder.id;
+                        bookmarkPath = `${mainFolderPath}/${windowFolderName}/${groupName}/${tabFolderName}`;
+                    } else {
+                        // Create bookmark directly under group folder
+                        bookmarkParentId = groupFolder.id;
+                        bookmarkPath = `${mainFolderPath}/${windowFolderName}/${groupName}`;
+                    }
+                    
+                    // Create bookmark
                     await chrome.bookmarks.create({
-                        parentId: tabFolder.id,
+                        parentId: bookmarkParentId,
                         title: `${prefix} ${tab.title}`,
                         url: tab.url
                     });
+                    
+                    // Log bookmark creation
+                    bookmarkLog.push(`${bookmarkPath} ${tab.url}`);
                 }
             }
 
@@ -540,16 +560,30 @@ async function saveWindows(windows, downloadPath) {
                 const tabCreationTime = new Date(tabTimestamp);
                 const prefix = formatTimestamp(tabCreationTime);
 
-                // Create tab folder under window folder
-                const tabFolderName = formatTabFolder(tab.title, tab.id);
-                const tabFolder = await createBookmarkFolder(tabFolderName, windowFolder.id);
+                let bookmarkParentId;
+                let bookmarkPath;
                 
-                // Create bookmark in tab folder
+                if (includeTabFolders) {
+                    // Create tab folder under window folder
+                    const tabFolderName = formatTabFolder(tab.title, tab.id);
+                    const tabFolder = await createBookmarkFolder(tabFolderName, windowFolder.id);
+                    bookmarkParentId = tabFolder.id;
+                    bookmarkPath = `${mainFolderPath}/${windowFolderName}/${tabFolderName}`;
+                } else {
+                    // Create bookmark directly under window folder
+                    bookmarkParentId = windowFolder.id;
+                    bookmarkPath = `${mainFolderPath}/${windowFolderName}`;
+                }
+                
+                // Create bookmark
                 await chrome.bookmarks.create({
-                    parentId: tabFolder.id,
+                    parentId: bookmarkParentId,
                     title: `${prefix} ${tab.title}`,
                     url: tab.url
                 });
+                
+                // Log bookmark creation
+                bookmarkLog.push(`${bookmarkPath} ${tab.url}`);
             }
 
             // Download tab contents if auto-download is enabled
@@ -567,6 +601,30 @@ async function saveWindows(windows, downloadPath) {
             }
         }
 
+        // Create and download log file
+        if (bookmarkLog.length > 0) {
+            const logContent = bookmarkLog.join('\n');
+            const logBlob = new Blob([logContent], { type: 'text/plain' });
+            const logUrl = URL.createObjectURL(logBlob);
+            
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const hours = String(today.getHours()).padStart(2, '0');
+            const minutes = String(today.getMinutes()).padStart(2, '0');
+            const logFilename = sanitizedPath 
+                ? `${sanitizedPath}/${mainFolderPath}/${year}${month}${day}${hours}${minutes}_logging.txt`
+                : `${mainFolderPath}/${year}${month}${day}${hours}${minutes}_logging.txt`;
+            
+            await chrome.downloads.download({
+                url: logUrl,
+                filename: logFilename,
+                saveAs: false
+            });
+            
+            setTimeout(() => URL.revokeObjectURL(logUrl), 1000);
+        }
+        
         const successMessage = autoDownloadEnabled 
             ? 'All tabs saved and downloaded successfully!' 
             : 'All tabs saved successfully!';
